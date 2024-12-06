@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3410471157
+CRC: 3566514886
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: a98b4b06893d7e4fbb2bfaacbf06a879
+    Hash: 973af8514d05f03195565aea1791345b
   TypeTreeHash:
     serializedVersion: 2
-    Hash: b22057b18eb02d2a82c74a7ea844037e
+    Hash: 6d1784461be6e750514e0bcddc50e53d
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: a98b4b06893d7e4fbb2bfaacbf06a879
+    Hash: 973af8514d05f03195565aea1791345b
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -19,6 +19,8 @@ ClassTypes:
 - Class: 21
   Script: {instanceID: 0}
 - Class: 23
+  Script: {instanceID: 0}
+- Class: 28
   Script: {instanceID: 0}
 - Class: 33
   Script: {instanceID: 0}
@@ -32,6 +34,8 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 82
   Script: {instanceID: 0}
+- Class: 83
+  Script: {instanceID: 0}
 - Class: 90
   Script: {instanceID: 0}
 - Class: 91
@@ -41,14 +45,20 @@ ClassTypes:
 - Class: 114
   Script: {fileID: -1316427704, guid: 30534a6f96417e1578491dec35947abb, type: 3}
 - Class: 114
+  Script: {fileID: 11500000, guid: c30496d6ae6d6f907456e10a94e01ec6, type: 3}
+- Class: 114
   Script: {fileID: 11500000, guid: 507293d35d7a13e5b9ca9bb60e082e11, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 3c36d0a92cbb1f26a39169ef0eae393a, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 3d0cf24d2ccc3b7eab72048d0f57c437, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
 - Class: 114
   Script: {fileID: -305051733, guid: a94cc4dbfd1181143a38c982aa9a3d2e, type: 3}
 - Class: 115
+  Script: {instanceID: 0}
+- Class: 213
   Script: {instanceID: 0}
 - Class: 241
   Script: {instanceID: 0}
@@ -57,6 +67,8 @@ ClassTypes:
 - Class: 245
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers:
+- AssemblyName: Assembly-CSharp
+  ClassName: Battery
 - AssemblyName: Assembly-CSharp
   ClassName: InteractEvent
 - AssemblyName: Assembly-CSharp
@@ -71,5 +83,6 @@ SerializeReferenceClassIdentifiers:
   ClassName: UnityEngine.Events.PersistentListenerMode
 Assets:
 - Assets/ModAssets/Washing Machine.prefab
+- Assets/ModAssets/CoinItem.asset
 - Assets/ModAssets/WashingMachine.asset
 Dependencies: []

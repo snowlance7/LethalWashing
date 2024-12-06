@@ -30,7 +30,7 @@ namespace LethalWashing
         public static AssetBundle ModAssets = null!;
 
         // Configs
-        public static ConfigEntry<bool>? configHideCodeOnTerminal;
+        public static ConfigEntry<float>? configWashTime;
 
 
         private void Awake()
@@ -49,7 +49,7 @@ namespace LethalWashing
             // Configs
 
             // MainNest
-            configHideCodeOnTerminal = Config.Bind("Nest", "Hide Code On Terminal", true, "If set to true, will make the code on the ship monitor for the nest be ??, requiring the player to find the nest physically to turn off its spawning.");
+            configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap.");
 
 
             // Loading Assets
@@ -69,6 +69,14 @@ namespace LethalWashing
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(WashingMachineRef.spawnableMapObject.prefabToSpawn);
             LoggerInstance.LogDebug($"Registering WashingMachine");
             MapObjects.RegisterMapObject(WashingMachineRef);
+
+            Item Coin = ModAssets.LoadAsset<Item>("Assets/ModAssets/CoinItem.asset");
+            if (Coin == null) { LoggerInstance.LogError("Error: Couldnt get CoinItem from assets"); return; }
+            LoggerInstance.LogDebug($"Got Coin prefab");
+
+            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Coin.spawnPrefab);
+            LethalLib.Modules.Utilities.FixMixerGroups(Coin.spawnPrefab);
+            LethalLib.Modules.Items.RegisterScrap(Coin);
 
             // Finished
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} has loaded!");
