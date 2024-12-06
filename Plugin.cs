@@ -67,6 +67,7 @@ namespace LethalWashing
             if (WashingMachineRef == null) { LoggerInstance.LogError("Error: Couldnt get WashingMachine from assets"); return; }
             LoggerInstance.LogDebug("Registering WashingMachine network prefab...");
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(WashingMachineRef.spawnableMapObject.prefabToSpawn);
+            LethalLib.Modules.Utilities.FixMixerGroups(WashingMachineRef.spawnableMapObject.prefabToSpawn);
             LoggerInstance.LogDebug($"Registering WashingMachine");
             MapObjects.RegisterMapObject(WashingMachineRef);
 
