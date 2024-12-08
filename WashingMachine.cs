@@ -21,7 +21,7 @@ namespace LethalWashing
         public Collider triggerCollider = null!;
 #pragma warning restore 0649
 
-        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap; } }
+        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap && localPlayer.currentlyHeldObjectServer.GetComponent<NoDespawnScript>() == null; } }
 
         GrabbableObject? itemInDrum;
         GrabbableObject? coinInHatch;
@@ -110,7 +110,7 @@ namespace LethalWashing
             {
                 triggerCollider.enabled = true;
                 trigger.interactable = false;
-                trigger.disabledHoverTip = "Washing scrap - " + washTimer.ToString();
+                trigger.disabledHoverTip = "Washing scrap - " + ((int)washTimer).ToString();
                 canWashScrap = false;
                 return;
             }
@@ -128,7 +128,6 @@ namespace LethalWashing
             if (itemInDrum == null) { LoggerInstance.LogError("Item in washing machine is null!"); return; }
             washing = false;
             animator.SetBool("doorOpen", true);
-            animator.SetBool("hatchOpen", true);
             int coinValue = itemInDrum.scrapValue;
             itemInDrum.SetScrapValue(0);
 
@@ -147,7 +146,7 @@ namespace LethalWashing
             itemInDrum.grabbable = true;
             WashingMachineAudio.PlayOneShot(DingSFX, 1f);
 
-            if (IsServerOrHost)
+            if (IsServerOrHost && coinValue > 0)
             {
                 coinInHatch = GameObject.Instantiate(CoinPrefab, CoinSpawn).GetComponentInChildren<PhysicsProp>();
                 coinInHatch.NetworkObject.Spawn(destroyWithScene: true);
@@ -173,11 +172,13 @@ namespace LethalWashing
             {
                 WashingMachineAudio.PlayOneShot(DoorCloseSFX);
                 WashingMachineAudio.Play();
+                washTimer = washTime;
             }
             else
             {
-                WashingMachineAudio.PlayOneShot(DoorOpenSFX);
                 WashingMachineAudio.Stop();
+                WashingMachineAudio.PlayOneShot(DingSFX);
+                WashingMachineAudio.PlayOneShot(DoorOpenSFX);
             }
         }
         
@@ -199,7 +200,6 @@ namespace LethalWashing
                 itemInDrum = netObj.GetComponent<GrabbableObject>();
                 itemInDrum.grabbable = false;
                 washing = true;
-                washTimer = washTime;
                 animator.SetBool("doorOpen", false);
             }
         }
@@ -213,6 +213,7 @@ namespace LethalWashing
                 if (coinInHatch == null) { LoggerInstance.LogError("Coin in hatch is null!"); return; }
                 coinInHatch.fallTime = 1f;
                 coinInHatch.SetScrapValue(coinValue);
+                animator.SetBool("hatchOpen", true);
             }
         }
     }
