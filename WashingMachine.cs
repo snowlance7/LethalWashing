@@ -1,18 +1,12 @@
-﻿using BepInEx.Logging;
-using GameNetcodeStuff;
-using System.Collections.Generic;
-using TMPro;
-using Unity.Netcode;
+﻿using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.AI;
 using static LethalWashing.Plugin;
 
 namespace LethalWashing
 {
     public class WashingMachine : NetworkBehaviour
     {
-        private static ManualLogSource logger = LoggerInstance;
-        public static List<GrabbableObject> WashedObjects = [];
+        public static WashingMachine? Instance;
 
 #pragma warning disable 0649
         public GameObject CoinPrefab = null!;
@@ -37,11 +31,30 @@ namespace LethalWashing
 
         // Configs
         float washTime = 10f;
+        public static Vector3 worldPosition = new Vector3(-27.6681f, -2.5747f, -24.764f); // -27.6681 -2.5747 -24.764
+        public static Quaternion worldRotation = Quaternion.Euler(0f, 90f, 0f); // 0 90 0
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            if (Instance != null)
+            {
+                Instance.NetworkObject.Despawn();
+            }
+
+            Instance = this;
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            base.OnNetworkDespawn();
+            Instance = null;
+        }
 
         public void Start()
         {
             washTime = configWashTime.Value;
-            logger.LogDebug("Washing machine spawned");
+            LoggerInstance.LogDebug("Washing machine spawned");
         }
 
         public void Update()
@@ -112,14 +125,14 @@ namespace LethalWashing
 
         public void FinishWashScrap()
         {
-            if (itemInDrum == null) { logger.LogError("Item in washing machine is null!"); return; }
+            if (itemInDrum == null) { LoggerInstance.LogError("Item in washing machine is null!"); return; }
             washing = false;
             animator.SetBool("doorOpen", true);
             animator.SetBool("hatchOpen", true);
             int coinValue = itemInDrum.scrapValue;
             itemInDrum.SetScrapValue(0);
-            //itemInDrum.itemProperties.isScrap = false;
-            WashedObjects.Add(itemInDrum);
+
+            itemInDrum.gameObject.AddComponent<NoDespawnScript>();
 
             ScanNodeProperties itemScanNode = itemInDrum.gameObject.GetComponentInChildren<ScanNodeProperties>();
             if (itemScanNode != null)
@@ -128,7 +141,7 @@ namespace LethalWashing
             }
             else
             {
-                logger.LogError("Scan node is missing for item!: " + itemInDrum.gameObject.name);
+                LoggerInstance.LogError("Scan node is missing for item!: " + itemInDrum.gameObject.name);
             }
 
             itemInDrum.grabbable = true;
@@ -197,7 +210,7 @@ namespace LethalWashing
             if (netRef.TryGet(out NetworkObject netObj))
             {
                 coinInHatch = netObj.GetComponent<PhysicsProp>();
-                if (coinInHatch == null) { logger.LogError("Coin in hatch is null!"); return; }
+                if (coinInHatch == null) { LoggerInstance.LogError("Coin in hatch is null!"); return; }
                 coinInHatch.fallTime = 1f;
                 coinInHatch.SetScrapValue(coinValue);
             }

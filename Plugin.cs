@@ -19,18 +19,22 @@ namespace LethalWashing
     [BepInDependency(LethalLib.Plugin.ModGUID)]
     public class Plugin : BaseUnityPlugin
     {
-        public static Plugin PluginInstance = null!;
-        public static ManualLogSource LoggerInstance = null!;
+        public static Plugin PluginInstance;
+        public static ManualLogSource LoggerInstance;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         public static PlayerControllerB localPlayer { get { return GameNetworkManager.Instance.localPlayerController; } }
         public static bool IsServerOrHost { get { return NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost; } }
         public static PlayerControllerB PlayerFromId(ulong id) { return StartOfRound.Instance.allPlayerScripts[StartOfRound.Instance.ClientPlayerList[id]]; }
 
         public SpawnableMapObjectDef WashingMachineRef = null!;
-        public static AssetBundle ModAssets = null!;
+        public static AssetBundle ModAssets;
 
         // Configs
-        public static ConfigEntry<float>? configWashTime;
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public static ConfigEntry<float> configWashTime;
+        public static ConfigEntry<Vector3> configWorldPosition;
+        public static ConfigEntry<Quaternion> configWorldRotation;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 
         private void Awake()
@@ -50,7 +54,11 @@ namespace LethalWashing
 
             // MainNest
             configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap.");
+            configWorldPosition = Config.Bind("General", "World Position", new Vector3(-27.6681f, -2.5747f, -24.764f), "The world spawn position of the washing machine at the company. By default it spawns next to the sell counter.");
+            configWorldRotation = Config.Bind("General", "World Rotation", Quaternion.Euler(0f, 90f, 0f), "The world spawn rotation of the washing machine at the company.");
 
+            WashingMachine.worldPosition = configWorldPosition.Value;
+            WashingMachine.worldRotation = configWorldRotation.Value;
 
             // Loading Assets
             string sAssemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

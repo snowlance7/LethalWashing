@@ -4,7 +4,7 @@ This mod spawns a washing machine at the company. You can put any scrap inside t
 
 ## Contact
 
-For issues or suggestions visit the [github](https://github.com/snowlance7/LethalWashing) or [Modding Discord]().
+For issues or suggestions visit the [github](https://github.com/snowlance7/LethalWashing) or [Modding Discord](https://discord.com/channels/1168655651455639582/1315122095738454056).
 
 ## For collaboration or queries
 
@@ -15,4 +15,4 @@ For issues or suggestions visit the [github](https://github.com/snowlance7/Letha
 
 ## Credit
 
-- [Washing Machine](https://skfb.ly/oqMJr) by Nommoc is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+- [Washing Machine](https://skfb.ly/oqMJr)

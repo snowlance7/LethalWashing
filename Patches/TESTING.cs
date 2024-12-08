@@ -21,7 +21,7 @@ using static LethalWashing.Plugin;
 
 namespace LethalWashing
 {
-    [HarmonyPatch]
+    //[HarmonyPatch]
     internal class TESTING : MonoBehaviour
     {
         private static ManualLogSource logger = Plugin.LoggerInstance;
