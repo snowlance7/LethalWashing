@@ -21,7 +21,7 @@ using static LethalWashing.Plugin;
 
 namespace LethalWashing
 {
-    //[HarmonyPatch]
+    [HarmonyPatch]
     internal class TESTING : MonoBehaviour
     {
         private static ManualLogSource logger = Plugin.LoggerInstance;
@@ -29,7 +29,24 @@ namespace LethalWashing
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
         {
+            SpawnCoin();
+        }
 
+        public static void SpawnCoin() // TODO: HOW TF DO I GET THIS TO WORK
+        {
+            CoinBehavior coin = GameObject.Instantiate(PluginInstance.CoinPrefab, localPlayer.playerEye.transform.position, Quaternion.identity, StartOfRound.Instance.propsContainer).GetComponentInChildren<CoinBehavior>();
+            coin.NetworkObject.Spawn();
+
+            coin.parentObject = null;
+            coin.transform.SetParent(StartOfRound.Instance.propsContainer, worldPositionStays: true);
+            coin.EnablePhysics(true);
+            coin.fallTime = 0f;
+            coin.startFallingPosition = coin.transform.parent.InverseTransformPoint(coin.transform.position);
+            Vector3 fallPosition = coin.GetGrenadeThrowDestination(localPlayer.playerEye.transform);
+            coin.targetFloorPosition = coin.transform.parent.InverseTransformPoint(fallPosition);
+            coin.floorYRot = -1;
+            logger.LogDebug(coin.startFallingPosition);
+            logger.LogDebug(fallPosition);
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.SubmitChat_performed))]

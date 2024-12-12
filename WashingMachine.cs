@@ -1,4 +1,7 @@
-﻿using Unity.Netcode;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
 
@@ -19,18 +22,21 @@ namespace LethalWashing
         public AudioClip DoorCloseSFX = null!;
         public Transform DrumPosition = null!;
         public Collider triggerCollider = null!;
+        public InteractTrigger doorTrigger = null!;
+        public Collider doorCollider = null!;
 #pragma warning restore 0649
 
         bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap && localPlayer.currentlyHeldObjectServer.GetComponent<NoDespawnScript>() == null; } }
 
-        GrabbableObject? itemInDrum;
-        GrabbableObject? coinInHatch;
+        public List<GrabbableObject> itemsInDrum = [];
+        //GrabbableObject? itemInDrum;
         bool washing;
         float washTimer;
-        bool canWashScrap;
+        bool readyForNextWash;
 
         // Configs
         float washTime = 10f;
+        bool multipleWashes = false;
         public static Vector3 worldPosition = new Vector3(-27.6681f, -2.5747f, -24.764f); // -27.6681 -2.5747 -24.764
         public static Quaternion worldRotation = Quaternion.Euler(0f, 90f, 0f); // 0 90 0
 
@@ -54,6 +60,8 @@ namespace LethalWashing
         public void Start()
         {
             washTime = configWashTime.Value;
+            multipleWashes = configMultipleWashes.Value;
+            trigger.hoverTip = multipleWashes ? "Add Scrap [E]" : "Wash Scrap [E]";
             LoggerInstance.LogDebug("Washing machine spawned");
         }
 
@@ -69,103 +77,126 @@ namespace LethalWashing
                 }
             }
 
-            if (coinInHatch != null && coinInHatch.playerHeldBy != null)
-            {
-                coinInHatch = null;
-                animator.SetBool("hatchOpen", false);
-            }
+            doorCollider.enabled = !washing && itemsInDrum.Count > 0 && readyForNextWash;
 
-            if (itemInDrum != null && itemInDrum.playerHeldBy != null)
+            if (!washing && itemsInDrum.Count >= 0) // Default state
             {
-                itemInDrum = null;
-            }
-
-            if (!washing && itemInDrum == null) // Default state
-            {
-                triggerCollider.enabled = true;
-
-                if (LocalPlayerHoldingScrap)
+                if (localPlayer.currentlyHeldObjectServer != null) // Player is holding item
                 {
-                    if (coinInHatch != null)
+                    if (LocalPlayerHoldingScrap) // Player is holding scrap
                     {
-                        trigger.interactable = false;
-                        trigger.disabledHoverTip = "Take coin from hatch";
-                        canWashScrap = false;
-                        return;
+                        triggerCollider.enabled = true;
+                        trigger.interactable = true;
                     }
-
-                    trigger.interactable = true;
-                    trigger.hoverTip = "Wash Scrap [E]";
-                    canWashScrap = true;
+                    else // Player is holding something but it isnt scrap
+                    {
+                        triggerCollider.enabled = true;
+                        trigger.interactable = false;
+                        trigger.disabledHoverTip = "Requires scrap";
+                    }
                 }
-                else
+                else // Player is holding nothing
                 {
+                    triggerCollider.enabled = false;
                     trigger.interactable = false;
-                    trigger.disabledHoverTip = "Requires scrap";
-                    canWashScrap = false;
                 }
                 return;
             }
-            if (itemInDrum != null && washing) // Item in drum and washing
+            if (itemsInDrum.Count > 0 && washing) // Items in drum and washing
             {
+                doorCollider.enabled = false;
                 triggerCollider.enabled = true;
                 trigger.interactable = false;
                 trigger.disabledHoverTip = "Washing scrap - " + ((int)washTimer).ToString();
-                canWashScrap = false;
                 return;
             }
-            if (itemInDrum != null && !washing) // Item in drum after washing
+        }
+
+        public void UpdateDrum()
+        {
+            foreach (var item in itemsInDrum.ToList())
             {
-                triggerCollider.enabled = false;
-                trigger.interactable = false;
-                trigger.disabledHoverTip = "";
-                canWashScrap = false;
+                if (item.isHeld) { itemsInDrum.Remove(item); }
             }
         }
 
         public void FinishWashScrap()
         {
-            if (itemInDrum == null) { LoggerInstance.LogError("Item in washing machine is null!"); return; }
+            if (itemsInDrum.Count == 0) { LoggerInstance.LogError("Items in washing machine is null!"); return; }
             washing = false;
             animator.SetBool("doorOpen", true);
-            int coinValue = itemInDrum.scrapValue;
-            itemInDrum.SetScrapValue(0);
 
-            itemInDrum.gameObject.AddComponent<NoDespawnScript>();
-
-            ScanNodeProperties itemScanNode = itemInDrum.gameObject.GetComponentInChildren<ScanNodeProperties>();
-            if (itemScanNode != null)
+            List<int> coinValues = [];
+            foreach (var item in itemsInDrum)
             {
-                itemScanNode.subText = "";
+                if (item.scrapValue > 0)
+                {
+                    coinValues.Add(item.scrapValue);
+                    item.SetScrapValue(0);
+                }
+
+                if (item.GetComponent<NoDespawnScript>() == null) { item.gameObject.AddComponent<NoDespawnScript>(); }
+
+                ScanNodeProperties itemScanNode = item.gameObject.GetComponentInChildren<ScanNodeProperties>();
+                if (itemScanNode != null)
+                {
+                    itemScanNode.subText = "";
+                }
+                else
+                {
+                    LoggerInstance.LogError("Scan node is missing for item!: " + item.gameObject.name);
+                }
+
+                item.grabbable = true;
             }
-            else
-            {
-                LoggerInstance.LogError("Scan node is missing for item!: " + itemInDrum.gameObject.name);
-            }
 
-            itemInDrum.grabbable = true;
-            WashingMachineAudio.PlayOneShot(DingSFX, 1f);
-
-            if (IsServerOrHost && coinValue > 0)
+            if (IsServerOrHost)
             {
-                coinInHatch = GameObject.Instantiate(CoinPrefab, CoinSpawn).GetComponentInChildren<PhysicsProp>();
-                coinInHatch.NetworkObject.Spawn(destroyWithScene: true);
-                SpawnCoinInHatchClientRpc(coinInHatch.NetworkObject, coinValue);
+                if (coinValues.Count == 0) { return; }
+                StartCoroutine(SpawnCoinsCoroutine(coinValues));
             }
         }
 
-        public void WashScrap()
+        IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
         {
-            if (LocalPlayerHoldingScrap && !washing && itemInDrum == null && coinInHatch == null)
+            DoAnimationClientRpc("hatchOpen", true);
+            yield return new WaitForSeconds(3f);
+
+            foreach (var coinValue in coinValues)
             {
-                washing = true;
-                itemInDrum = localPlayer.currentlyHeldObjectServer;
+                if (coinValue <= 0) { continue; }
+                CoinBehavior coin = GameObject.Instantiate(CoinPrefab, CoinSpawn.transform.position, Quaternion.identity).GetComponentInChildren<CoinBehavior>();
+                coin.NetworkObject.Spawn();
+
+                coin.startFallingPosition = CoinSpawn.position;
+                Vector3 fallPosition = coin.GetGrenadeThrowDestination(CoinSpawn);
+                SpawnCoinFromHatchClientRpc(coin.NetworkObject, coinValue, fallPosition);
+                yield return new WaitForSeconds(1f);
+            }
+
+            DoAnimationClientRpc("hatchOpen", false);
+        }
+
+        // Interact Trigger stuff
+
+        public void StartWash()
+        {
+            WashScrapServerRpc();
+        }
+
+        public void AddScrapToWasher()
+        {
+            if (LocalPlayerHoldingScrap && !washing)
+            {
+                GrabbableObject item = localPlayer.currentlyHeldObjectServer;
+                itemsInDrum.Add(item);
                 localPlayer.DiscardHeldObject(true, null, DrumPosition.position);
-                WashScrapServerRpc(itemInDrum.NetworkObject);
+                AddItemToDrumServerRpc(item.NetworkObject);
             }
         }
 
         // Animation stuff
+
         public void PlayDoorSFX()
         {
             if (washing)
@@ -173,47 +204,86 @@ namespace LethalWashing
                 WashingMachineAudio.PlayOneShot(DoorCloseSFX);
                 WashingMachineAudio.Play();
                 washTimer = washTime;
+                readyForNextWash = false;
             }
             else
             {
                 WashingMachineAudio.Stop();
                 WashingMachineAudio.PlayOneShot(DingSFX);
                 WashingMachineAudio.PlayOneShot(DoorOpenSFX);
+                readyForNextWash = true;
             }
         }
-        
+
         // RPCs
+
         [ServerRpc(RequireOwnership = false)]
-        public void WashScrapServerRpc(NetworkObjectReference netRef)
+        public void RemoveItemFromDrumServerRpc(NetworkObjectReference netRef)
         {
-            if (IsServerOrHost)
-            {
-                WashScrapClientRpc(netRef);
-            }
+            if (!IsServerOrHost) { return; }
+            RemoveItemFromDrumClientRpc(netRef);
         }
 
         [ClientRpc]
-        public void WashScrapClientRpc(NetworkObjectReference netRef)
+        public void RemoveItemFromDrumClientRpc(NetworkObjectReference netRef)
         {
-            if (netRef.TryGet(out NetworkObject netObj))
-            {
-                itemInDrum = netObj.GetComponent<GrabbableObject>();
-                itemInDrum.grabbable = false;
-                washing = true;
-                animator.SetBool("doorOpen", false);
-            }
+            if (!netRef.TryGet(out NetworkObject netObj)) { return; }
+            if (!netObj.TryGetComponent(out GrabbableObject obj)) { return; }
+            itemsInDrum.Remove(obj);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void AddItemToDrumServerRpc(NetworkObjectReference netRef)
+        {
+            if (!IsServerOrHost) { return; }
+            AddItemToDrumClientRpc(netRef);
         }
 
         [ClientRpc]
-        public void SpawnCoinInHatchClientRpc(NetworkObjectReference netRef, int coinValue)
+        public void AddItemToDrumClientRpc(NetworkObjectReference netRef)
+        {
+            if (!netRef.TryGet(out NetworkObject netObj)) { return; }
+            if (!netObj.TryGetComponent(out GrabbableObject obj)) { return; }
+            itemsInDrum.Add(obj);
+        }
+
+        [ClientRpc]
+        public void DoAnimationClientRpc(string animationName, bool value)
+        {
+            animator.SetBool(animationName, value);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void WashScrapServerRpc()
+        {
+            if (!IsServerOrHost) { return; }
+            WashScrapClientRpc();
+        }
+
+        [ClientRpc]
+        public void WashScrapClientRpc()
+        {
+            washing = true;
+            foreach (var item in itemsInDrum)
+            {
+                item.grabbable = false;
+            }
+            animator.SetBool("doorOpen", false);
+        }
+
+        [ClientRpc]
+        public void SpawnCoinFromHatchClientRpc(NetworkObjectReference netRef, int coinValue, Vector3 fallPosition)
         {
             if (netRef.TryGet(out NetworkObject netObj))
             {
-                coinInHatch = netObj.GetComponent<PhysicsProp>();
-                if (coinInHatch == null) { LoggerInstance.LogError("Coin in hatch is null!"); return; }
-                coinInHatch.fallTime = 1f;
-                coinInHatch.SetScrapValue(coinValue);
-                animator.SetBool("hatchOpen", true);
+                CoinBehavior coin = netObj.GetComponent<CoinBehavior>();
+                if (coin == null) { LoggerInstance.LogError("Coin in hatch is null!"); return; }
+                coin.SetScrapValue(coinValue);
+                coin.transform.SetParent(StartOfRound.Instance.propsContainer, true);
+                coin.startFallingPosition = coin.transform.position;
+                coin.targetFloorPosition = fallPosition;
+                coin.fallTime = 0f;
+                coin.hasHitGround = false;
             }
         }
     }

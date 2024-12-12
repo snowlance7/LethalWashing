@@ -28,12 +28,14 @@ namespace LethalWashing
 
         public SpawnableMapObjectDef WashingMachineRef = null!;
         public static AssetBundle ModAssets;
+        public GameObject CoinPrefab;
 
         // Configs
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public static ConfigEntry<float> configWashTime;
         public static ConfigEntry<Vector3> configWorldPosition;
         public static ConfigEntry<Quaternion> configWorldRotation;
+        public static ConfigEntry<bool> configMultipleWashes;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 
@@ -52,10 +54,11 @@ namespace LethalWashing
 
             // Configs
 
-            // MainNest
+            // General
             configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap.");
             configWorldPosition = Config.Bind("General", "World Position", new Vector3(-27.6681f, -2.5747f, -24.764f), "The world spawn position of the washing machine at the company. By default it spawns next to the sell counter.");
             configWorldRotation = Config.Bind("General", "World Rotation", Quaternion.Euler(0f, 90f, 0f), "The world spawn rotation of the washing machine at the company.");
+            configMultipleWashes = Config.Bind("General", "Multiple Washes", false, "Allows for you to wash multiple items at once");
 
             WashingMachine.worldPosition = configWorldPosition.Value;
             WashingMachine.worldRotation = configWorldRotation.Value;
@@ -83,6 +86,7 @@ namespace LethalWashing
             if (Coin == null) { LoggerInstance.LogError("Error: Couldnt get CoinItem from assets"); return; }
             LoggerInstance.LogDebug($"Got Coin prefab");
 
+            CoinPrefab = Coin.spawnPrefab;
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Coin.spawnPrefab);
             LethalLib.Modules.Utilities.FixMixerGroups(Coin.spawnPrefab);
             LethalLib.Modules.Items.RegisterScrap(Coin);
