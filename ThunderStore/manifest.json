@@ -1,6 +1,6 @@
 {
   "name": "LethalWashing",
-  "version_number": "1.0.1",
+  "version_number": "1.1.0",
   "website_url": "https://github.com/snowlance7/LethalWashing",
   "description": "Wash your scrap at the company so it no longer despawns inside the ship on team wipe",
   "dependencies": [

@@ -36,7 +36,7 @@ namespace LethalWashing
 
         // Configs
         float washTime = 10f;
-        bool multipleWashes = false;
+        int maxItemsInDrum = 5;
         public static Vector3 worldPosition = new Vector3(-27.6681f, -2.5747f, -24.764f); // -27.6681 -2.5747 -24.764
         public static Quaternion worldRotation = Quaternion.Euler(0f, 90f, 0f); // 0 90 0
 
@@ -60,8 +60,7 @@ namespace LethalWashing
         public void Start()
         {
             washTime = configWashTime.Value;
-            multipleWashes = configMultipleWashes.Value;
-            trigger.hoverTip = multipleWashes ? "Add Scrap [E]" : "Wash Scrap [E]";
+            maxItemsInDrum = configMaxItemsInMachine.Value;
             LoggerInstance.LogDebug("Washing machine spawned");
         }
 
@@ -77,6 +76,8 @@ namespace LethalWashing
                 }
             }
 
+            UpdateDrum();
+
             doorCollider.enabled = !washing && itemsInDrum.Count > 0 && readyForNextWash;
 
             if (!washing && itemsInDrum.Count >= 0) // Default state
@@ -85,6 +86,14 @@ namespace LethalWashing
                 {
                     if (LocalPlayerHoldingScrap) // Player is holding scrap
                     {
+                        if (itemsInDrum.Count >= maxItemsInDrum)
+                        {
+                            trigger.disabledHoverTip = "Washing machine is full";
+                            triggerCollider.enabled = true;
+                            trigger.interactable = false;
+                            return;
+                        }
+                        trigger.hoverTip = "Add Scrap [E]";
                         triggerCollider.enabled = true;
                         trigger.interactable = true;
                     }
@@ -160,21 +169,24 @@ namespace LethalWashing
         IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
         {
             DoAnimationClientRpc("hatchOpen", true);
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSeconds(1.5f);
 
             foreach (var coinValue in coinValues)
             {
                 if (coinValue <= 0) { continue; }
-                CoinBehavior coin = GameObject.Instantiate(CoinPrefab, CoinSpawn.transform.position, Quaternion.identity).GetComponentInChildren<CoinBehavior>();
-                coin.NetworkObject.Spawn();
-
-                coin.startFallingPosition = CoinSpawn.position;
-                Vector3 fallPosition = coin.GetGrenadeThrowDestination(CoinSpawn);
-                SpawnCoinFromHatchClientRpc(coin.NetworkObject, coinValue, fallPosition);
-                yield return new WaitForSeconds(1f);
+                SpawnCoin(coinValue);
+                yield return new WaitForSeconds(0.1f);
             }
 
             DoAnimationClientRpc("hatchOpen", false);
+        }
+
+        public void SpawnCoin(int value)
+        {
+            CoinBehavior coin = GameObject.Instantiate(CoinPrefab, CoinSpawn.transform.position, CoinSpawn.transform.rotation).GetComponentInChildren<CoinBehavior>();
+            coin.SetScrapValue(value);
+            coin.NetworkObject.Spawn();
+            SpawnCoinFromHatchClientRpc(coin.NetworkObject, value);
         }
 
         // Interact Trigger stuff
@@ -189,7 +201,6 @@ namespace LethalWashing
             if (LocalPlayerHoldingScrap && !washing)
             {
                 GrabbableObject item = localPlayer.currentlyHeldObjectServer;
-                itemsInDrum.Add(item);
                 localPlayer.DiscardHeldObject(true, null, DrumPosition.position);
                 AddItemToDrumServerRpc(item.NetworkObject);
             }
@@ -272,18 +283,13 @@ namespace LethalWashing
         }
 
         [ClientRpc]
-        public void SpawnCoinFromHatchClientRpc(NetworkObjectReference netRef, int coinValue, Vector3 fallPosition)
+        public void SpawnCoinFromHatchClientRpc(NetworkObjectReference netRef, int coinValue)
         {
             if (netRef.TryGet(out NetworkObject netObj))
             {
                 CoinBehavior coin = netObj.GetComponent<CoinBehavior>();
                 if (coin == null) { LoggerInstance.LogError("Coin in hatch is null!"); return; }
                 coin.SetScrapValue(coinValue);
-                coin.transform.SetParent(StartOfRound.Instance.propsContainer, true);
-                coin.startFallingPosition = coin.transform.position;
-                coin.targetFloorPosition = fallPosition;
-                coin.fallTime = 0f;
-                coin.hasHitGround = false;
             }
         }
     }

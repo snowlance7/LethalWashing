@@ -35,7 +35,8 @@ namespace LethalWashing
         public static ConfigEntry<float> configWashTime;
         public static ConfigEntry<Vector3> configWorldPosition;
         public static ConfigEntry<Quaternion> configWorldRotation;
-        public static ConfigEntry<bool> configMultipleWashes;
+        public static ConfigEntry<int> configMaxItemsInMachine;
+        public static ConfigEntry<bool> configEnableDebugging;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 
@@ -58,7 +59,8 @@ namespace LethalWashing
             configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap.");
             configWorldPosition = Config.Bind("General", "World Position", new Vector3(-27.6681f, -2.5747f, -24.764f), "The world spawn position of the washing machine at the company. By default it spawns next to the sell counter.");
             configWorldRotation = Config.Bind("General", "World Rotation", Quaternion.Euler(0f, 90f, 0f), "The world spawn rotation of the washing machine at the company.");
-            configMultipleWashes = Config.Bind("General", "Multiple Washes", false, "Allows for you to wash multiple items at once");
+            configMaxItemsInMachine = Config.Bind("General", "Max items in machine", 5, "How many items can fit in the machine at a time");
+            configEnableDebugging = Config.Bind("General", "Enable Debugging", false, "Shows debugging logs in the console");
 
             WashingMachine.worldPosition = configWorldPosition.Value;
             WashingMachine.worldRotation = configWorldRotation.Value;
@@ -93,6 +95,12 @@ namespace LethalWashing
 
             // Finished
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} has loaded!");
+        }
+
+        public static void logIfDebug(string message)
+        {
+            if (!configEnableDebugging.Value) { return; }
+            LoggerInstance.LogDebug(message);
         }
 
         private static void InitializeNetworkBehaviours()
