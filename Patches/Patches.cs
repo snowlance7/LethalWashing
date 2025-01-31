@@ -20,9 +20,10 @@ namespace LethalWashing
             try
             {
                 if (StartOfRound.Instance.firingPlayersCutsceneRunning) { return true; }
-                if (!__instance.TryGetComponent<GrabbableObject>(out GrabbableObject grabObj)) { return true; }
-                if (!grabObj.TryGetComponent<NoDespawnScript>(out NoDespawnScript despawnScript)) { return true; }
+                if (!__instance.TryGetComponent(out GrabbableObject grabObj)) { return true; }
                 if (StartOfRound.Instance.isChallengeFile || (!grabObj.isHeld && !grabObj.isInShipRoom) || grabObj.deactivated) { return true; }
+                if (configUseDespawnScript.Value && !grabObj.TryGetComponent(out NoDespawnScript despawnScript)) { return true; }
+                if (!configUseDespawnScript.Value && grabObj.scrapValue > 0) { return true; }
                 return false;
             }
             catch (System.Exception e)
@@ -38,9 +39,9 @@ namespace LethalWashing
             try
             {
                 if (!IsServerOrHost) { return; }
-                if (__instance.currentLevel.levelID != 3) { return; }
+                //if (__instance.currentLevel.levelID != 3) { return; }
                 if (WashingMachine.Instance == null) { return; }
-                WashingMachine.Instance.NetworkObject.Despawn();
+                WashingMachine.Instance.NetworkObject.Despawn(true);
             }
             catch (System.Exception e)
             {
@@ -55,9 +56,17 @@ namespace LethalWashing
             try
             {
                 if (!IsServerOrHost) { return; }
-                if (__instance.currentLevel.levelID != 3) { return; }
-
-                UnityEngine.GameObject.Instantiate(PluginInstance.WashingMachineRef.spawnableMapObject.prefabToSpawn, WashingMachine.worldPosition, WashingMachine.worldRotation).GetComponent<NetworkObject>().Spawn(true);
+                switch (__instance.currentLevel.name)
+                {
+                    case "CompanyBuildingLevel":
+                        UnityEngine.GameObject.Instantiate(PluginInstance.WashingMachineRef.spawnableMapObject.prefabToSpawn, WashingMachine.worldPosition, WashingMachine.worldRotation).GetComponent<NetworkObject>().Spawn(true);
+                        break;
+                    case "GaletryLevel":
+                        UnityEngine.GameObject.Instantiate(PluginInstance.WashingMachineRef.spawnableMapObject.prefabToSpawn, WashingMachine.worldPositionGaletry, WashingMachine.worldRotationGaletry).GetComponent<NetworkObject>().Spawn(true);
+                        break;
+                    default:
+                        break;
+                }
             }
             catch (System.Exception e)
             {

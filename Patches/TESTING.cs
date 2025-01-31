@@ -32,11 +32,11 @@ namespace LethalWashing
 
         }
 
-        public static void SpawnCoin(bool fromMachine) // TODO: HOW TF DO I GET THIS TO WORK ITS LITERALLY THE SAME FUNCTION AS IN HEAVYITEMSCPS THIS IS BS
+        public static void SpawnCoin(bool fromMachine, int amount = 1)
         {
             if (WashingMachine.Instance != null && fromMachine)
             {
-                WashingMachine.Instance.SpawnCoin(10);
+                WashingMachine.Instance.SpawnCoin(amount);
                 return;
             }
             if (fromMachine) return;
@@ -57,6 +57,13 @@ namespace LethalWashing
                 case "/refresh":
                     RoundManager.Instance.RefreshEnemiesList();
                     HoarderBugAI.RefreshGrabbableObjectsInMapList();
+                    break;
+                case "/levels":
+                    foreach (var level in StartOfRound.Instance.levels)
+                    {
+                        logger.LogDebug(level.levelID);
+                        logger.LogDebug(level.name);
+                    }
                     break;
                 default:
                     break;

@@ -1,3 +1,7 @@
+## 1.2.0
+- Added the washing machine to Galetry
+- Changed method for detecting if items should despawn
+
 ## 1.1.0
 - You can now wash multiple scrap at once. Configurable in configs.
 - Coins spawn differently now

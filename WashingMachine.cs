@@ -26,7 +26,8 @@ namespace LethalWashing
         public Collider doorCollider = null!;
 #pragma warning restore 0649
 
-        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap && localPlayer.currentlyHeldObjectServer.GetComponent<NoDespawnScript>() == null; } }
+        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap
+                    && ((configUseDespawnScript.Value && localPlayer.currentlyHeldObjectServer.GetComponent<NoDespawnScript>() == null) || (!configUseDespawnScript.Value && localPlayer.currentlyHeldObjectServer.scrapValue <= 0)); } }
 
         public List<GrabbableObject> itemsInDrum = [];
         //GrabbableObject? itemInDrum;
@@ -35,33 +36,32 @@ namespace LethalWashing
         bool readyForNextWash;
 
         // Configs
-        float washTime = 10f;
-        int maxItemsInDrum = 5;
         public static Vector3 worldPosition = new Vector3(-27.6681f, -2.5747f, -24.764f); // -27.6681 -2.5747 -24.764
         public static Quaternion worldRotation = Quaternion.Euler(0f, 90f, 0f); // 0 90 0
+        public static Vector3 worldPositionGaletry = new Vector3(-65.2742f, 1.1536f, 20.3886f); // -65.2742 1.1536 20.3886
+        public static Quaternion worldRotationGaletry = Quaternion.Euler(0f, 180f, 0f); // 0 180 0
 
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            if (Instance != null)
+            if (Instance != null && Instance != this)
             {
+                if (!IsServerOrHost) { return; }
                 Instance.NetworkObject.Despawn();
+                return;
             }
 
             Instance = this;
+            LoggerInstance.LogDebug("Washing Machine spawned at " + transform.position);
         }
 
         public override void OnNetworkDespawn()
         {
             base.OnNetworkDespawn();
-            Instance = null;
-        }
-
-        public void Start()
-        {
-            washTime = configWashTime.Value;
-            maxItemsInDrum = configMaxItemsInMachine.Value;
-            LoggerInstance.LogDebug("Washing machine spawned");
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
 
         public void Update()
@@ -86,7 +86,7 @@ namespace LethalWashing
                 {
                     if (LocalPlayerHoldingScrap) // Player is holding scrap
                     {
-                        if (itemsInDrum.Count >= maxItemsInDrum)
+                        if (itemsInDrum.Count >= configMaxItemsInMachine.Value)
                         {
                             trigger.disabledHoverTip = "Washing machine is full";
                             triggerCollider.enabled = true;
@@ -214,7 +214,7 @@ namespace LethalWashing
             {
                 WashingMachineAudio.PlayOneShot(DoorCloseSFX);
                 WashingMachineAudio.Play();
-                washTimer = washTime;
+                washTimer = configWashTime.Value;
                 readyForNextWash = false;
             }
             else
