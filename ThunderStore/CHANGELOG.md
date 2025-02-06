@@ -1,3 +1,8 @@
+## 1.2.1
+- Removed despawn script mechanic, washing machine will now just take scrap value off of items and give coins
+- Any item worth 0 scrap value will now no longer despawn from the ship on team wipe
+- Fixed scrap not being washable
+
 ## 1.2.0
 - Added the washing machine to Galetry
 - Changed method for detecting if items should despawn

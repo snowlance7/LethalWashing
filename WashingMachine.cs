@@ -26,11 +26,9 @@ namespace LethalWashing
         public Collider doorCollider = null!;
 #pragma warning restore 0649
 
-        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap
-                    && ((configUseDespawnScript.Value && localPlayer.currentlyHeldObjectServer.GetComponent<NoDespawnScript>() == null) || (!configUseDespawnScript.Value && localPlayer.currentlyHeldObjectServer.scrapValue <= 0)); } }
+        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap; } }
 
         public List<GrabbableObject> itemsInDrum = [];
-        //GrabbableObject? itemInDrum;
         bool washing;
         float washTimer;
         bool readyForNextWash;
@@ -143,8 +141,6 @@ namespace LethalWashing
                     coinValues.Add(item.scrapValue);
                     item.SetScrapValue(0);
                 }
-
-                if (item.GetComponent<NoDespawnScript>() == null) { item.gameObject.AddComponent<NoDespawnScript>(); }
 
                 ScanNodeProperties itemScanNode = item.gameObject.GetComponentInChildren<ScanNodeProperties>();
                 if (itemScanNode != null)

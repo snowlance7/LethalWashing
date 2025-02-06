@@ -22,8 +22,7 @@ namespace LethalWashing
                 if (StartOfRound.Instance.firingPlayersCutsceneRunning) { return true; }
                 if (!__instance.TryGetComponent(out GrabbableObject grabObj)) { return true; }
                 if (StartOfRound.Instance.isChallengeFile || (!grabObj.isHeld && !grabObj.isInShipRoom) || grabObj.deactivated) { return true; }
-                if (configUseDespawnScript.Value && !grabObj.TryGetComponent(out NoDespawnScript despawnScript)) { return true; }
-                if (!configUseDespawnScript.Value && grabObj.scrapValue > 0) { return true; }
+                if (grabObj.scrapValue > 0) { return true; }
                 return false;
             }
             catch (System.Exception e)
