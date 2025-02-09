@@ -49,20 +49,18 @@ namespace LethalWashing
             startFallingPosition = transform.position;
             logIfDebug("Start: " + startFallingPosition);
 
-            targetFloorPosition = GetGrenadeThrowDestination(ejectFrom); // -21.4333 -2.6356 -25.0231
+            targetFloorPosition = GetGrenadeThrowDestination(ejectFrom, configEjectDistance.Value); // -21.4333 -2.6356 -25.0231
             logIfDebug("End: " + targetFloorPosition);
 
             hasHitGround = false;
             fallTime = 0f;
         }
 
-        public Vector3 GetGrenadeThrowDestination(Transform ejectPoint)
+        /*public Vector3 GetGrenadeThrowDestination(Transform ejectPoint)
         {
             Vector3 position = base.transform.position;
-            Debug.DrawRay(ejectPoint.position, ejectPoint.forward, Color.yellow, 15f);
             grenadeThrowRay = new Ray(ejectPoint.position, ejectPoint.forward);
             position = ((!Physics.Raycast(grenadeThrowRay, out grenadeHit, 12f, stunGrenadeMask, QueryTriggerInteraction.Ignore)) ? grenadeThrowRay.GetPoint(10f) : grenadeThrowRay.GetPoint(grenadeHit.distance - 0.05f));
-            Debug.DrawRay(position, Vector3.down, Color.blue, 15f);
             grenadeThrowRay = new Ray(position, Vector3.down);
             if (Physics.Raycast(grenadeThrowRay, out grenadeHit, 30f, stunGrenadeMask, QueryTriggerInteraction.Ignore))
             {
@@ -75,7 +73,40 @@ namespace LethalWashing
 
             position += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
             return position;
+        }*/
+
+        public Vector3 GetGrenadeThrowDestination(Transform ejectPoint, float _throwDistance = 10f)
+        {
+            Vector3 position = base.transform.position;
+            grenadeThrowRay = new Ray(ejectPoint.position, ejectPoint.forward);
+
+            // Adjusted throw distance
+            if (!Physics.Raycast(grenadeThrowRay, out grenadeHit, _throwDistance, stunGrenadeMask, QueryTriggerInteraction.Ignore))
+            {
+                position = grenadeThrowRay.GetPoint(_throwDistance - 2f); // Adjust target point
+            }
+            else
+            {
+                position = grenadeThrowRay.GetPoint(grenadeHit.distance - 0.05f);
+            }
+
+            // Second raycast downward to find the ground
+            grenadeThrowRay = new Ray(position, Vector3.down);
+            if (Physics.Raycast(grenadeThrowRay, out grenadeHit, 30f, stunGrenadeMask, QueryTriggerInteraction.Ignore))
+            {
+                position = grenadeHit.point + Vector3.up * 0.05f;
+            }
+            else
+            {
+                position = grenadeThrowRay.GetPoint(30f);
+            }
+
+            // Add randomness
+            position += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
+
+            return position;
         }
+
 
         public override void FallWithCurve()
         {

@@ -35,6 +35,7 @@ namespace LethalWashing
         public static ConfigEntry<float> configWashTime;
         public static ConfigEntry<int> configMaxItemsInMachine;
         public static ConfigEntry<bool> configEnableDebugging;
+        public static ConfigEntry<float> configEjectDistance;
 
         public static ConfigEntry<Vector3> configWorldPosition;
         public static ConfigEntry<Quaternion> configWorldRotation;
@@ -59,15 +60,16 @@ namespace LethalWashing
             // Configs
 
             // General
-            configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap.");
+            configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap");
             configMaxItemsInMachine = Config.Bind("General", "Max items in machine", 5, "How many items can fit in the machine at a time");
             configEnableDebugging = Config.Bind("General", "Enable Debugging", false, "Shows debugging logs in the console");
+            configEjectDistance = Config.Bind("General", "Eject Distance", 5f, "How far the coins should eject from the washing machine");
 
-            configWorldPosition = Config.Bind("General", "World Position", new Vector3(-27.6681f, -2.5747f, -24.764f), "The world spawn position of the washing machine at the company. By default it spawns next to the sell counter.");
-            configWorldRotation = Config.Bind("General", "World Rotation", Quaternion.Euler(0f, 90f, 0f), "The world spawn rotation of the washing machine at the company.");
+            configWorldPosition = Config.Bind("General", "World Position", new Vector3(-27.6681f, -2.5747f, -24.764f), "The world spawn position of the washing machine at the company. By default it spawns next to the sell counter");
+            configWorldRotation = Config.Bind("General", "World Rotation", Quaternion.Euler(0f, 90f, 0f), "The world spawn rotation of the washing machine at the company");
 
-            configGaletryWorldPosition = Config.Bind("General", "Galetry World Position", new Vector3(-65.2742f, 1.1536f, 20.3886f), "The world spawn position of the washing machine at Galetry. By default it spawns next to the sell counter.");
-            configGaletryWorldRotation = Config.Bind("General", "Galetry World Rotation", Quaternion.Euler(0f, 180f, 0f), "The world spawn rotation of the washing machine at Galetry.");
+            configGaletryWorldPosition = Config.Bind("General", "Galetry World Position", new Vector3(-65.2742f, 1.1536f, 20.3886f), "The world spawn position of the washing machine at Galetry. By default it spawns next to the sell counter");
+            configGaletryWorldRotation = Config.Bind("General", "Galetry World Rotation", Quaternion.Euler(0f, 180f, 0f), "The world spawn rotation of the washing machine at Galetry");
 
             WashingMachine.worldPosition = configWorldPosition.Value;
             WashingMachine.worldRotation = configWorldRotation.Value;
