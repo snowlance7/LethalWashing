@@ -1,3 +1,6 @@
+## 1.2.3
+- Fix for items staying in players hands when attempting to despawn them
+
 ## 1.2.2
 - Change the throw distance of throwing the coin from 12 to 10
 - Changed the distance coins eject from the washing machine from 12 to 5 and added a config option to change the distance

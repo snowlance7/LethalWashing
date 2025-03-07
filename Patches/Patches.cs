@@ -13,12 +13,14 @@ namespace LethalWashing
     internal class Patches
     {
         private static ManualLogSource logger = Plugin.LoggerInstance;
+        static bool despawningProps = false;
 
         [HarmonyPrefix, HarmonyPatch(typeof(NetworkObject), nameof(NetworkObject.Despawn))]
         public static bool DespawnPrefix(NetworkObject __instance)
         {
             try
             {
+                if (!despawningProps) { return true; }
                 if (StartOfRound.Instance.firingPlayersCutsceneRunning) { return true; }
                 if (!__instance.TryGetComponent(out GrabbableObject grabObj)) { return true; }
                 if (StartOfRound.Instance.isChallengeFile || (!grabObj.isHeld && !grabObj.isInShipRoom) || grabObj.deactivated) { return true; }
@@ -32,13 +34,28 @@ namespace LethalWashing
             }
         }
 
-        [HarmonyPostfix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
-        public static void DespawnPropsAtEndOfRoundPatch(RoundManager __instance)
+        [HarmonyPrefix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
+        public static void DespawnPropsAtEndOfRoundPrefix(RoundManager __instance)
         {
             try
             {
                 if (!IsServerOrHost) { return; }
-                //if (__instance.currentLevel.levelID != 3) { return; }
+                despawningProps = true;
+            }
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
+                return;
+            }
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
+        public static void DespawnPropsAtEndOfRoundPostfix(RoundManager __instance)
+        {
+            try
+            {
+                if (!IsServerOrHost) { return; }
+                despawningProps = false;
                 if (WashingMachine.Instance == null) { return; }
                 WashingMachine.Instance.NetworkObject.Despawn(true);
             }
