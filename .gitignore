@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 /Patches/TESTING.cs
 /ThunderStore/icon.png
+/ThunderStore/CHANGELOG.md
+/ThunderStore/manifest.json
+/ThunderStore/README.md
