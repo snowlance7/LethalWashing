@@ -1,0 +1,10 @@
+{
+  "name": "LethalWashing",
+  "version_number": "1.2.3",
+  "website_url": "https://github.com/snowlance7/LethalWashing",
+  "description": "Prevents scrap with 0 scrap value from despawning on team wipe and adds a washing machine to convert scrap value on items into coins",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2100",
+    "Evaisa-LethalLib-0.16.2"
+  ]
+}
