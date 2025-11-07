@@ -30,11 +30,6 @@ namespace LethalWashing
             EjectFromWashingMachine(WashingMachine.Instance.CoinSpawn);
         }
 
-        public override void Update()
-        {
-            base.Update();
-        }
-
         public override void ItemActivate(bool used, bool buttonDown = true)
         {
             base.ItemActivate(used, buttonDown);

@@ -1,3 +1,6 @@
+## 1.2.4
+- Updated for v73
+
 ## 1.2.3
 - Fix for items staying in players hands when attempting to despawn them
 
