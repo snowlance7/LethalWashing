@@ -31,17 +31,16 @@ namespace LethalWashing
         public GameObject CoinPrefab;
 
         // Configs
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CS8618 // TODO: Add configs: > to spit out one coin with combined value > blacklist config > config to turn off "prevent despawn on team wipe" > config to blacklist certain items from team wipe
         public static ConfigEntry<float> configWashTime;
         public static ConfigEntry<int> configMaxItemsInMachine;
-        public static ConfigEntry<bool> configEnableDebugging;
         public static ConfigEntry<float> configEjectDistance;
 
         public static ConfigEntry<Vector3> configWorldPosition;
         public static ConfigEntry<Quaternion> configWorldRotation;
         public static ConfigEntry<Vector3> configGaletryWorldPosition;
         public static ConfigEntry<Quaternion> configGaletryWorldRotation;
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning restore CS8618
 
 
         private void Awake()
