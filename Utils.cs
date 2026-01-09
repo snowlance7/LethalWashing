@@ -1,24 +1,33 @@
-﻿using BepInEx.Logging;
+﻿using Dawn;
 using GameNetcodeStuff;
 using HarmonyLib;
-using LethalLib.Modules;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Animations.Rigging;
 using static LethalWashing.Plugin;
 
 namespace LethalWashing
 {
     public static class Utils
     {
-        private static ManualLogSource logger = LoggerInstance;
+        public static bool isBeta = true;
+        public static bool testing => _testing && isBeta;
+        public static bool _testing = false;
+
+        public static bool trailerMode = false;
 
         public static bool inTestRoom => StartOfRound.Instance?.testRoom != null;
-        public static bool testing = false;
-        public static bool spawningAllowed = true;
-        public static bool trailerMode = false;
+        public static bool DEBUG_disableSpawning = false;
+        public static bool DEBUG_disableTargetting = false;
+        public static bool DEBUG_disableHostTargetting = false;
+        public static bool DEBUG_disableMoving = false;
+
+        public static bool localPlayerFrozen = false;
+
+        public static GameObject[] allAINodes => inTestRoom ? GameObject.FindGameObjectsWithTag("AINode") : insideAINodes.Concat(outsideAINodes).ToArray();
 
         public static GameObject[] insideAINodes
         {
@@ -50,8 +59,8 @@ namespace LethalWashing
             switch (args[0])
             {
                 case "/spawning":
-                    spawningAllowed = !spawningAllowed;
-                    HUDManager.Instance.DisplayTip("Spawning Allowed", spawningAllowed.ToString());
+                    DEBUG_disableSpawning = !DEBUG_disableSpawning;
+                    HUDManager.Instance.DisplayTip("Disable Spawning", DEBUG_disableSpawning.ToString());
                     break;
                 case "/hazards":
                     Dictionary<string, GameObject> hazards = Utils.GetAllHazards();
@@ -62,8 +71,8 @@ namespace LethalWashing
                     }
                     break;
                 case "/testing":
-                    testing = !testing;
-                    HUDManager.Instance.DisplayTip("Testing", testing.ToString());
+                    _testing = !_testing;
+                    HUDManager.Instance.DisplayTip("Testing", _testing.ToString());
                     break;
                 case "/surfaces":
                     foreach (var surface in StartOfRound.Instance.footstepSurfaces)
@@ -96,6 +105,10 @@ namespace LethalWashing
                         logger.LogDebug(dungeon.dungeonFlow.name);
                     }
                     break;
+                case "/time":
+                    RoundManager.Instance.currentLevel.planetHasTime = !RoundManager.Instance.currentLevel.planetHasTime;
+                    HUDManager.Instance.DisplayTip("planetHasTime", RoundManager.Instance.currentLevel.planetHasTime.ToString());
+                    break;
                 default:
                     break;
             }
@@ -106,103 +119,52 @@ namespace LethalWashing
             HUDManager.Instance.AddChatMessage(msg, "Server");
         }
 
-        public static void RegisterItem(string itemPath, string levelRarities = "", string customLevelRarities = "", int minValue = 0, int maxValue = 0)
+        public static Transform? GetClosestAINodeToPosition(Vector3 pos)
         {
-            Item item = ModAssets!.LoadAsset<Item>(itemPath);
-            if (item == null) { LoggerInstance.LogError($"Error: Couldn't get prefab from {itemPath}"); return; }
-            LoggerInstance.LogDebug($"Got {item.name} prefab");
+            Transform? closestTransform = null;
+            float closestDistance = Mathf.Infinity;
 
-            item.minValue = minValue;
-            item.maxValue = maxValue;
-
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(item.spawnPrefab);
-            Utilities.FixMixerGroups(item.spawnPrefab);
-            LethalLib.Modules.Items.RegisterScrap(item, GetLevelRarities(levelRarities), GetCustomLevelRarities(customLevelRarities));
-        }
-
-        public static void RegisterEnemy(string enemyPath, string tnPath, string tkPath, string levelRarities = "", string customLevelRarities = "")
-        {
-            EnemyType enemy = ModAssets!.LoadAsset<EnemyType>(enemyPath);
-            if (enemy == null) { LoggerInstance.LogError($"Error: Couldn't get prefab from {enemyPath}"); return; }
-            LoggerInstance.LogDebug($"Got {enemy.name} prefab");
-
-            TerminalNode tn = ModAssets.LoadAsset<TerminalNode>(tnPath);
-            TerminalKeyword tk = ModAssets.LoadAsset<TerminalKeyword>(tkPath);
-
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(enemy.enemyPrefab);
-            Enemies.RegisterEnemy(enemy, GetLevelRarities(levelRarities), GetCustomLevelRarities(customLevelRarities), tn, tk);
-        }
-
-        public static Dictionary<Levels.LevelTypes, int>? GetLevelRarities(string? levelsString)
-        {
-            try
+            foreach (var node in allAINodes)
             {
-                Dictionary<Levels.LevelTypes, int> levelRaritiesDict = new Dictionary<Levels.LevelTypes, int>();
+                if (node == null) { continue; }
 
-                if (levelsString != null && levelsString != "")
+                float distance = Vector3.Distance(pos, node.transform.position);
+                if (distance > closestDistance) { continue; }
+
+                closestDistance = distance;
+                closestTransform = node.transform;
+            }
+
+            return closestTransform;
+        }
+
+        public static Vector3 GetBestThrowDirection(Vector3 origin, Vector3 forward, int rayCount, float maxDistance, LayerMask layerMask)
+        {
+            Vector3 bestDirection = forward;
+            float farthestHit = 0f;
+
+            for (int i = 0; i < rayCount; i++)
+            {
+                float angle = i * (360f / rayCount);
+                Vector3 dir = Quaternion.Euler(0, angle, 0) * forward.normalized;
+
+                // Raycast from origin outward
+                if (Physics.Raycast(origin + Vector3.up * 0.5f, dir, out RaycastHit hit, maxDistance, layerMask))
                 {
-                    string[] levels = levelsString.Split(',');
-
-                    foreach (string level in levels)
+                    if (hit.distance > farthestHit)
                     {
-                        string[] levelSplit = level.Split(':');
-                        if (levelSplit.Length != 2) { continue; }
-                        string levelType = levelSplit[0].Trim();
-                        string levelRarity = levelSplit[1].Trim();
-
-                        if (Enum.TryParse<Levels.LevelTypes>(levelType, out Levels.LevelTypes levelTypeEnum) && int.TryParse(levelRarity, out int levelRarityInt))
-                        {
-                            levelRaritiesDict.Add(levelTypeEnum, levelRarityInt);
-                        }
-                        else
-                        {
-                            LoggerInstance.LogError($"Error: Invalid level rarity: {levelType}:{levelRarity}");
-                        }
+                        bestDirection = dir;
+                        farthestHit = hit.distance;
                     }
                 }
-                return levelRaritiesDict;
-            }
-            catch (Exception e)
-            {
-                LoggerInstance.LogError($"Error: {e}");
-                return null;
-            }
-        }
-
-        public static Dictionary<string, int>? GetCustomLevelRarities(string? levelsString)
-        {
-            try
-            {
-                Dictionary<string, int> customLevelRaritiesDict = new Dictionary<string, int>();
-
-                if (levelsString != null)
+                else
                 {
-                    string[] levels = levelsString.Split(',');
-
-                    foreach (string level in levels)
-                    {
-                        string[] levelSplit = level.Split(':');
-                        if (levelSplit.Length != 2) { continue; }
-                        string levelType = levelSplit[0].Trim();
-                        string levelRarity = levelSplit[1].Trim();
-
-                        if (int.TryParse(levelRarity, out int levelRarityInt))
-                        {
-                            customLevelRaritiesDict.Add(levelType, levelRarityInt);
-                        }
-                        else
-                        {
-                            LoggerInstance.LogError($"Error: Invalid level rarity: {levelType}:{levelRarity}");
-                        }
-                    }
+                    // If nothing is hit, assume max distance (ideal throw)
+                    return dir;
                 }
-                return customLevelRaritiesDict;
             }
-            catch (Exception e)
-            {
-                LoggerInstance.LogError($"Error: {e}");
-                return null;
-            }
+
+            return bestDirection;
         }
 
         public static Vector3 GetSpeed()
@@ -276,6 +238,7 @@ namespace LethalWashing
 
         public static void FreezePlayer(PlayerControllerB player, bool value)
         {
+            localPlayerFrozen = value;
             player.disableInteract = value;
             player.disableLookInput = value;
             player.disableMoveInput = value;
@@ -290,12 +253,13 @@ namespace LethalWashing
         public static void MakePlayerInvisible(PlayerControllerB player, bool value)
         {
             GameObject scavengerModel = player.gameObject.transform.Find("ScavengerModel").gameObject;
-            if (scavengerModel == null) { LoggerInstance.LogError("ScavengerModel not found"); return; }
+            if (scavengerModel == null) { logger.LogError("ScavengerModel not found"); return; }
             scavengerModel.transform.Find("LOD1").gameObject.SetActive(!value);
             scavengerModel.transform.Find("LOD2").gameObject.SetActive(!value);
             scavengerModel.transform.Find("LOD3").gameObject.SetActive(!value);
             scavengerModel.transform.Find("metarig/spine/spine.001/spine.002/spine.003/LevelSticker").gameObject.SetActive(!value);
             scavengerModel.transform.Find("metarig/spine/spine.001/spine.002/spine.003/BetaBadge").gameObject.SetActive(!value);
+            player.playerBadgeMesh.gameObject.SetActive(!value);
 
         }
 
@@ -337,7 +301,18 @@ namespace LethalWashing
             Vector3 to = RoundManager.Instance.GetNavMeshPosition(toPos, RoundManager.Instance.navHit, 1.75f);
 
             NavMeshPath path = new();
-            return NavMesh.CalculatePath(from, to, -1, path) && Vector3.Distance(path.corners[path.corners.Length - 1], RoundManager.Instance.GetNavMeshPosition(to, RoundManager.Instance.navHit, 2.7f)) <= 1.55f; // TODO: Test this
+            return NavMesh.CalculatePath(from, to, -1, path) && Vector3.Distance(path.corners[path.corners.Length - 1], RoundManager.Instance.GetNavMeshPosition(to, RoundManager.Instance.navHit, 2.7f)) <= 1.55f;
+        }
+
+        public static bool CalculatePath(Vector3 fromPos, Vector3 toPos, Vector3 mainEntranceInsidePosition, Vector3 mainEntranceOutsidePosition, bool isOutside)
+        {
+            if (!CalculatePath(fromPos, toPos))
+            {
+                Vector3 entrancePos = isOutside ? mainEntranceOutsidePosition : mainEntranceInsidePosition;
+                Vector3 otherSideEntrancePos = isOutside ? mainEntranceInsidePosition : mainEntranceOutsidePosition;
+                return CalculatePath(fromPos, entrancePos) && CalculatePath(otherSideEntrancePos, toPos);
+            }
+            return true;
         }
 
         public static T? GetClosestGameObjectOfType<T>(Vector3 position) where T : Component
@@ -372,32 +347,50 @@ namespace LethalWashing
             }
         }
 
-        public static GameObject? GetClosestGameObjectToPosition(this List<GameObject> list, Vector3 position)
+        public static T? GetClosestToPosition<T>(this IEnumerable<T> list, Vector3 position, Func<T, Vector3> positionSelector) where T : class
         {
-            GameObject? closest = null;
+            T? closest = null;
             float closestDistance = Mathf.Infinity;
 
             foreach (var item in list)
             {
                 if (item == null) continue;
 
-                float distance = Vector3.Distance(position, item.transform.position);
-                if (distance < closestDistance)
-                {
-                    closest = item;
-                    closestDistance = distance;
-                }
+                float distance = Vector3.Distance(position, positionSelector(item));
+                if (distance >= closestDistance) continue;
+
+                closest = item;
+                closestDistance = distance;
             }
 
             return closest;
+        }
+
+        public static T? GetFarthestFromPosition<T>(this IEnumerable<T> list, Vector3 position, Func<T, Vector3> positionSelector) where T : class
+        {
+            T? farthest = null;
+            float farthestDistance = 0f;
+
+            foreach (var item in list)
+            {
+                if (item == null) continue;
+
+                float distance = Vector3.Distance(position, positionSelector(item));
+                if (distance <= farthestDistance) continue;
+
+                farthest = item;
+                farthestDistance = distance;
+            }
+
+            return farthest;
         }
 
         public static Dictionary<string, GameObject> GetAllHazards()
         {
             Dictionary<string, GameObject> hazards = new Dictionary<string, GameObject>();
             List<SpawnableMapObject> spawnableMapObjects = (from x in StartOfRound.Instance.levels.SelectMany((SelectableLevel level) => level.spawnableMapObjects)
-                                              group x by ((UnityEngine.Object)x.prefabToSpawn).name into g
-                                              select g.First()).ToList();
+                                                            group x by ((UnityEngine.Object)x.prefabToSpawn).name into g
+                                                            select g.First()).ToList();
             foreach (SpawnableMapObject item in spawnableMapObjects)
             {
                 hazards.Add(item.prefabToSpawn.name, item.prefabToSpawn);
@@ -405,11 +398,28 @@ namespace LethalWashing
             return hazards;
         }
 
-        public static GameObject? GetRandomNode(bool outside)
+        public static GameObject? GetRandomNode(bool outside, GameObject[]? excludedNodes = default)
         {
             logger.LogDebug("Choosing random node...");
 
+            excludedNodes ??= Array.Empty<GameObject>();
+
             GameObject[] nodes = outside ? outsideAINodes : insideAINodes;
+            nodes = nodes.Except(excludedNodes).ToArray();
+
+            if (nodes.Length == 0) return null;
+
+            int randIndex = UnityEngine.Random.Range(0, nodes.Length);
+            return nodes[randIndex];
+        }
+
+        public static GameObject? GetRandomNode(GameObject[]? excludedNodes = default)
+        {
+            logger.LogDebug("Choosing random node...");
+
+            excludedNodes ??= Array.Empty<GameObject>();
+
+            GameObject[] nodes = allAINodes.Except(excludedNodes).ToArray();
 
             if (nodes.Length == 0) return null;
 
@@ -515,30 +525,223 @@ namespace LethalWashing
 
             return players.ToArray();
         }
+
+        public static void RebuildRig(PlayerControllerB pcb)
+        {
+            if (pcb != null && pcb.playerBodyAnimator != null)
+            {
+                pcb.playerBodyAnimator.WriteDefaultValues();
+                pcb.playerBodyAnimator.GetComponent<RigBuilder>()?.Build();
+            }
+        }
+
+        public static bool IsPlayerChild(PlayerControllerB player)
+        {
+            return player.thisPlayerBody.localScale.y < 1f;
+        }
+
+        public static PlayerControllerB? GetFarthestPlayerFromPosition(Vector3 position, float minDistance = 0f)
+        {
+            float farthestDistance = minDistance;
+            PlayerControllerB? farthestPlayer = null;
+
+            foreach (var player in StartOfRound.Instance.allPlayerScripts)
+            {
+                if (player == null || !player.isPlayerControlled) { continue; }
+                float distance = Vector3.Distance(position, player.transform.position);
+                if (distance < farthestDistance) { continue; }
+                farthestDistance = distance;
+                farthestPlayer = player;
+            }
+
+            return farthestPlayer;
+        }
+
+        public static float CanPathToPoint(Vector3 startPos, Vector3 endPos)
+        {
+            NavMeshPath path = new NavMeshPath();
+            if (!NavMesh.CalculatePath(startPos, endPos, -1, path) || (int)path.status != 0)
+            {
+                return -1f;
+            }
+            float pathDistance = 0f;
+            if (path.corners.Length > 1)
+            {
+                for (int i = 1; i < path.corners.Length; i++)
+                {
+                    pathDistance += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+                }
+            }
+            return pathDistance;
+        }
+
+        public static void PlaySoundAtPosition(Vector3 pos, AudioClip clip, float volume = 1f, bool randomizePitch = true, bool spatial3D = true, float min3DDistance = 1f, float max3DDistance = 10f)
+        {
+            GameObject soundObj = GameObject.Instantiate(new GameObject("TempSoundEffectObj"), pos, Quaternion.identity);
+            AudioSource source = soundObj.AddComponent<AudioSource>();
+
+            OccludeAudio occlude = soundObj.AddComponent<OccludeAudio>();
+            occlude.lowPassOverride = 20000f;
+
+            source.rolloffMode = AudioRolloffMode.Linear;
+
+            if (randomizePitch)
+                source.pitch = UnityEngine.Random.Range(0.94f, 1.06f);
+
+            source.clip = clip;
+            source.volume = volume;
+            source.spatialBlend = spatial3D ? 1 : 0;
+            source.minDistance = min3DDistance;
+            source.maxDistance = max3DDistance;
+            source.Play();
+            GameObject.Destroy(soundObj, source.clip.length);
+        }
+
+        public static void PlaySoundAtPosition(Vector3 pos, AudioClip[] clips, float volume = 1f, bool randomizePitch = true, bool spatial3D = true, float min3DDistance = 1f, float max3DDistance = 10f)
+        {
+            int index = UnityEngine.Random.Range(0, clips.Length);
+            PlaySoundAtPosition(pos, clips[index], volume, randomizePitch, spatial3D, min3DDistance, max3DDistance);
+        }
+
+        public static PlayerControllerB? GetRandomPlayer()
+        {
+            PlayerControllerB[] players = StartOfRound.Instance.allPlayerScripts.Where(x => x != null && x.isPlayerControlled).ToArray();
+            if (players.Length <= 0) { return null; }
+            int index = UnityEngine.Random.Range(0, players.Length);
+            return players[index];
+        }
+
+        public static void MufflePlayer(PlayerControllerB player, bool muffle)
+        {
+            if (player.currentVoiceChatAudioSource == null)
+            {
+                StartOfRound.Instance.RefreshPlayerVoicePlaybackObjects();
+            }
+            if (player.currentVoiceChatAudioSource != null)
+            {
+                OccludeAudio component = player.currentVoiceChatAudioSource.GetComponent<OccludeAudio>();
+                player.currentVoiceChatAudioSource.GetComponent<AudioLowPassFilter>().lowpassResonanceQ = muffle ? 5f : 1f;
+                component.overridingLowPass = muffle;
+                component.lowPassOverride = muffle ? 500f : 20000f;
+                player.voiceMuffledByEnemy = muffle;
+            }
+        }
+
+        public static EntranceTeleport? GetClosestExitFromPosition(Vector3 position, bool checkForPath = false)
+        {
+            EntranceTeleport? closestExit = null;
+            float closestDistance = Mathf.Infinity;
+
+            foreach (var entranceTeleport in UnityEngine.Object.FindObjectsOfType<EntranceTeleport>(includeInactive: false).ToList())
+            {
+                if (entranceTeleport.exitPoint == null)
+                {
+                    if (!entranceTeleport.FindExitPoint())
+                    {
+                        logger.LogError("Couldnt find exit point for entrance with id of " + entranceTeleport.entranceId);
+                        continue;
+                    }
+                }
+                if (entranceTeleport.exitPoint == null) { continue; }
+                if (checkForPath && !CalculatePath(position, entranceTeleport.exitPoint.position)) { continue; }
+                float distance = Vector3.Distance(entranceTeleport.exitPoint.position, position);
+
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestExit = entranceTeleport;
+                }
+            }
+
+            return closestExit;
+        }
+
+        public static Vector3 GetFloorPosition(Vector3 position, float verticalOffset = 0)
+        {
+            if (Physics.Raycast(position, -Vector3.up, out var hitInfo, 80f, 268437761, QueryTriggerInteraction.Ignore))
+            {
+                return hitInfo.point + Vector3.up * 0.04f + verticalOffset * Vector3.up;
+            }
+            return position;
+        }
+
+        public static GrabbableObject? SpawnItem(NamespacedKey<DawnItemInfo> key, Vector3 position, Quaternion rotation = default, float fallTime = 0f)
+        {
+            if (!IsServerOrHost) { return null; }
+            GameObject obj = GameObject.Instantiate(LethalContent.Items[key].Item.spawnPrefab, position, rotation, RoundManager.Instance.mapPropsContainer.transform);
+            GrabbableObject grabObj = obj.GetComponent<GrabbableObject>();
+            grabObj.fallTime = fallTime;
+            grabObj.NetworkObject.Spawn();
+            return grabObj;
+        }
+
+        public static T GetRandom<T>(this IEnumerable<T> source, System.Random random)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            if (random == null)
+                throw new ArgumentNullException(nameof(random));
+
+            T? chosen = default!;
+            int count = 0;
+
+            foreach (var item in source)
+            {
+                count++;
+                if (random.Next(count) == 0) // replace previous with decreasing probability
+                    chosen = item;
+            }
+
+            if (count == 0)
+                throw new InvalidOperationException("Sequence contains no elements.");
+
+            return chosen;
+        }
+
+        public static T GetRandom<T>(this IEnumerable<T> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            T? chosen = default!;
+            int count = 0;
+
+            foreach (var item in source)
+            {
+                count++;
+                if (UnityEngine.Random.Range(0, count) == 0) // replace previous with decreasing probability
+                    chosen = item;
+            }
+
+            if (count == 0)
+                throw new InvalidOperationException("Sequence contains no elements.");
+
+            return chosen;
+        }
     }
 
     [HarmonyPatch]
     public class UtilsPatches
     {
-        private static ManualLogSource logger = LoggerInstance;
-
         [HarmonyPrefix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.SpawnInsideEnemiesFromVentsIfReady))]
         public static bool SpawnInsideEnemiesFromVentsIfReadyPrefix()
         {
-            if (!Utils.spawningAllowed) { return false; } return true;
+            if (Utils.isBeta && Utils.DEBUG_disableSpawning) { return false; }
+            return true;
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.SpawnDaytimeEnemiesOutside))]
         public static bool SpawnDaytimeEnemiesOutsidePrefix()
         {
-            if (!Utils.spawningAllowed) { return false; }
+            if (Utils.isBeta && Utils.DEBUG_disableSpawning) { return false; }
             return true;
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.SpawnEnemiesOutside))]
         public static bool SpawnEnemiesOutsidePrefix()
         {
-            if (!Utils.spawningAllowed) { return false; }
+            if (Utils.isBeta && Utils.DEBUG_disableSpawning) { return false; }
             return true;
         }
     }

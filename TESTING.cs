@@ -1,8 +1,4 @@
-using BepInEx.Logging;
-using DunGen;
 using HarmonyLib;
-using System.Collections.Generic;
-using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
@@ -25,8 +21,6 @@ namespace LethalWashing
     [HarmonyPatch]
     public class TESTING : MonoBehaviour
     {
-        private static ManualLogSource logger = LoggerInstance;
-
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
         {
@@ -42,9 +36,6 @@ namespace LethalWashing
 
             switch (args[0])
             {
-                case "/spawn":
-                    GameObject.Instantiate(PluginInstance.WashingMachineRef.spawnableMapObject.prefabToSpawn, localPlayer.transform.position + localPlayer.transform.forward * 2f, Quaternion.identity).GetComponent<NetworkObject>().Spawn(true);
-                    break;
                 default:
                     Utils.ChatCommand(args);
                     break;

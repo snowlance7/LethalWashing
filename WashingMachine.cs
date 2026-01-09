@@ -1,65 +1,66 @@
-﻿using System.Collections;
+﻿using DigitalRuby.ThunderAndLightning;
+using Dusk;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
 
+// TODO: To fix items breaking when put in the washing machine, do what vanilla lethal company does to items when pocketing them!
+
 namespace LethalWashing
 {
     public class WashingMachine : NetworkBehaviour
     {
-        public static WashingMachine? Instance;
+        public static WashingMachine? Instance { get; private set; }
 
-#pragma warning disable 0649
-        public GameObject CoinPrefab = null!;
-        public Animator animator = null!;
-        public Transform CoinSpawn = null!;
-        public InteractTrigger trigger = null!;
-        public AudioSource WashingMachineAudio = null!;
-        public AudioClip DingSFX = null!;
-        public AudioClip DoorOpenSFX = null!;
-        public AudioClip DoorCloseSFX = null!;
-        public Transform DrumPosition = null!;
-        public Collider triggerCollider = null!;
-        public InteractTrigger doorTrigger = null!;
-        public Collider doorCollider = null!;
-#pragma warning restore 0649
+#pragma warning disable CS8618
+        public Animator animator;
+
+        public Transform coinSpawn;
+        public Transform drumPosition;
+
+        public InteractTrigger drumTrigger;
+        public InteractTrigger doorTrigger;
+
+        public AudioSource audioSource;
+        public AudioClip dingSFX;
+        public AudioClip doorOpenSFX;
+        public AudioClip doorCloseSFX;
+
+        public Collider drumCollider;
+        public Collider doorCollider;
+
+        public PlaceableObjectsSurface placeableSurface;
+        public PlaceableShipObject placeableShipObject;
+#pragma warning restore CS8618
 
         bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap; } }
 
         public List<GrabbableObject> itemsInDrum = [];
-        bool washing;
+        bool washing => washTimer > 0;
         float washTimer;
         bool readyForNextWash;
+        bool usable => TimeOfDay.Instance.daysUntilDeadline <= 0 || !usableOnlyOnCompanyDay;
+        bool doorOpen;
 
-        // Configs
-        public static Vector3 worldPosition = new Vector3(-27.6681f, -2.5747f, -24.764f); // -27.6681 -2.5747 -24.764
-        public static Quaternion worldRotation = Quaternion.Euler(0f, 90f, 0f); // 0 90 0
-        public static Vector3 worldPositionGaletry = new Vector3(-65.2742f, 1.1536f, 20.3886f); // -65.2742 1.1536 20.3886
-        public static Quaternion worldRotationGaletry = Quaternion.Euler(0f, 180f, 0f); // 0 180 0
+        // Configs // TODO: Set up
+        float washTime = 10f;
+        bool usableOnlyOnCompanyDay = true;
+        bool combineCoinValues = false;
+        int coinsToSpawn = 1;
+        //bool spawnLasagnaWhenSpawned => ContentHandler<SCP3166ContentHandler>.Instance.SCP3166.GetConfig<bool>("Spawn Lasagna When Spawned").Value;
 
-        public override void OnNetworkSpawn()
+
+        public void Start()
         {
-            base.OnNetworkSpawn();
-            if (Instance != null && Instance != this)
-            {
-                if (!IsServerOrHost) { return; }
-                Instance.NetworkObject.Despawn();
-                return;
-            }
-
             Instance = this;
-            LoggerInstance.LogDebug("Washing Machine spawned at " + transform.position);
+            logger.LogDebug("Washing Machine spawned at " + transform.position);
         }
-
-        public override void OnNetworkDespawn()
+        public override void OnDestroy()
         {
-            base.OnNetworkDespawn();
-            if (Instance == this)
-            {
-                Instance = null;
-            }
+            Instance = null;
         }
 
         public void Update()
@@ -74,151 +75,171 @@ namespace LethalWashing
                 }
             }
 
-            UpdateDrum();
+            doorCollider.enabled = !washing && doorOpen && itemsInDrum.Count > 0 && readyForNextWash && usable && localPlayer.currentlyHeldObjectServer == null;
+            drumCollider.enabled = !washing && readyForNextWash;
+            drumTrigger.interactable = !washing && doorOpen && readyForNextWash && usable && LocalPlayerHoldingScrap;
 
-            doorCollider.enabled = !washing && itemsInDrum.Count > 0 && readyForNextWash;
+            foreach (var item in itemsInDrum.ToList())
+            {
+                if (item.isHeld) { itemsInDrum.Remove(item); }
+            }
 
-            if (!washing && itemsInDrum.Count >= 0) // Default state
+            if (!readyForNextWash && itemsInDrum.Count <= 0)
+            {
+                readyForNextWash = true;
+            }
+
+            if (!usable)
+            {
+                if (itemsInDrum.Count <= 0 && doorOpen)
+                {
+                    OpenDoor(false);
+                    drumTrigger.disabledHoverTip = "Notice: No washing until company day";
+                }
+            }
+
+            if (!washing) // Default state
             {
                 if (localPlayer.currentlyHeldObjectServer != null) // Player is holding item
                 {
                     if (LocalPlayerHoldingScrap) // Player is holding scrap
                     {
-                        if (itemsInDrum.Count >= configMaxItemsInMachine.Value)
-                        {
-                            trigger.disabledHoverTip = "Washing machine is full";
-                            triggerCollider.enabled = true;
-                            trigger.interactable = false;
-                            return;
-                        }
-                        trigger.hoverTip = "Add Scrap [E]";
-                        triggerCollider.enabled = true;
-                        trigger.interactable = true;
+                        drumTrigger.hoverTip = "Add Scrap [E]";
+                        //drumCollider.enabled = true;
+                        //drumTrigger.interactable = true;
                     }
                     else // Player is holding something but it isnt scrap
                     {
-                        triggerCollider.enabled = true;
-                        trigger.interactable = false;
-                        trigger.disabledHoverTip = "Requires scrap";
+                        //drumCollider.enabled = true;
+                        //drumTrigger.interactable = false;
+                        drumTrigger.disabledHoverTip = "Requires scrap";
                     }
                 }
                 else // Player is holding nothing
                 {
-                    triggerCollider.enabled = false;
-                    trigger.interactable = false;
+                    //drumCollider.enabled = false;
+                    //drumTrigger.interactable = false;
                 }
                 return;
             }
-            if (itemsInDrum.Count > 0 && washing) // Items in drum and washing
+            else // Items in drum and washing
             {
-                doorCollider.enabled = false;
-                triggerCollider.enabled = true;
-                trigger.interactable = false;
-                trigger.disabledHoverTip = "Washing scrap - " + ((int)washTimer).ToString();
+                //doorCollider.enabled = false;
+                //drumCollider.enabled = true;
+                //drumTrigger.interactable = false;
+                drumTrigger.disabledHoverTip = "Washing scrap - " + ((int)washTimer).ToString();
                 return;
             }
         }
 
-        public void UpdateDrum()
+        public void OpenDoor(bool open)
         {
-            foreach (var item in itemsInDrum.ToList())
-            {
-                if (item.isHeld) { itemsInDrum.Remove(item); }
-            }
+            animator.SetBool("doorOpen", open);
+            doorOpen = open;
         }
 
         public void FinishWashScrap()
         {
-            if (itemsInDrum.Count == 0) { LoggerInstance.LogError("Items in washing machine is null!"); return; }
-            washing = false;
-            animator.SetBool("doorOpen", true);
+            if (itemsInDrum.Count == 0) { return; }
+            OpenDoor(true);
 
-            List<int> coinValues = [];
+            List<int> scrapValues = [];
             foreach (var item in itemsInDrum)
             {
                 if (item.scrapValue > 0)
                 {
-                    coinValues.Add(item.scrapValue);
+                    scrapValues.Add(item.scrapValue);
                     item.SetScrapValue(0);
                 }
 
-                ScanNodeProperties itemScanNode = item.gameObject.GetComponentInChildren<ScanNodeProperties>();
+                ScanNodeProperties? itemScanNode = item.gameObject.GetComponentInChildren<ScanNodeProperties>();
                 if (itemScanNode != null)
                 {
                     itemScanNode.subText = "";
                 }
                 else
                 {
-                    LoggerInstance.LogError("Scan node is missing for item!: " + item.gameObject.name);
+                    logger.LogWarning("Cant find scannode for " + item.itemProperties.name);
                 }
 
                 item.grabbable = true;
             }
 
-            if (IsServerOrHost)
-            {
-                if (coinValues.Count == 0) { return; }
-                StartCoroutine(SpawnCoinsCoroutine(coinValues));
-            }
+            if (scrapValues.Count == 0) { return; }
+            SpawnCoins(scrapValues);
         }
 
-        IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
+        void SpawnCoins(List<int> values)
         {
-            DoAnimationClientRpc("hatchOpen", true);
-            yield return new WaitForSeconds(1.5f);
-
-            foreach (var coinValue in coinValues)
+            if (combineCoinValues && coinsToSpawn > 0)
             {
-                if (coinValue <= 0) { continue; }
-                SpawnCoin(coinValue);
-                yield return new WaitForSeconds(0.1f);
+                int totalValue = values.Sum();
+
+                if (totalValue > 0)
+                {
+                    values.Clear();
+
+                    int baseValue = totalValue / coinsToSpawn;
+                    int remainder = totalValue % coinsToSpawn;
+
+                    for (int i = 0; i < coinsToSpawn; i++)
+                    {
+                        values.Add(baseValue + (i < remainder ? 1 : 0));
+                    }
+                }
             }
 
-            DoAnimationClientRpc("hatchOpen", false);
+            IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
+            {
+                animator.SetBool("hatchOpen", true);
+                yield return new WaitForSeconds(1.5f);
+
+                foreach (var coinValue in coinValues)
+                {
+                    if (coinValue <= 0) { continue; }
+                    SpawnCoin(coinValue);
+                    yield return new WaitForSeconds(0.1f);
+                }
+
+                animator.SetBool("hatchOpen", false);
+            }
+
+            StartCoroutine(SpawnCoinsCoroutine(values));
         }
 
-        public void SpawnCoin(int value)
+        void SpawnCoin(int value)
         {
-            CoinBehavior coin = GameObject.Instantiate(CoinPrefab, CoinSpawn.transform.position, CoinSpawn.transform.rotation).GetComponentInChildren<CoinBehavior>();
-            coin.SetScrapValue(value);
-            coin.NetworkObject.Spawn();
-            SpawnCoinFromHatchClientRpc(coin.NetworkObject, value);
+            if (!IsServer) { return; }
+            CoinBehavior coin = Utils.SpawnItem(LethalWashingKeys.Coin, coinSpawn.transform.position, coinSpawn.transform.rotation)!.GetComponentInChildren<CoinBehavior>();
+            coin.SetScrapValueClientRpc(value);
         }
 
-        // Interact Trigger stuff
-
-        public void StartWash()
+        public void StartWash() // InteractTrigger
         {
             WashScrapServerRpc();
         }
 
-        public void AddScrapToWasher()
+        public void AddScrapToWasher() // InteractTrigger
         {
-            if (LocalPlayerHoldingScrap && !washing)
-            {
-                GrabbableObject item = localPlayer.currentlyHeldObjectServer;
-                localPlayer.DiscardHeldObject(true, null, DrumPosition.position);
-                AddItemToDrumServerRpc(item.NetworkObject);
-            }
+            GrabbableObject item = localPlayer.currentlyHeldObjectServer;
+            localPlayer.DiscardHeldObject(true, null, drumPosition.position);
+            AddItemToDrumServerRpc(item.NetworkObject);
         }
 
-        // Animation stuff
-
-        public void PlayDoorSFX()
+        public void PlayDoorSFX() // Animation
         {
             if (washing)
             {
-                WashingMachineAudio.PlayOneShot(DoorCloseSFX);
-                WashingMachineAudio.Play();
-                washTimer = configWashTime.Value;
+                audioSource.PlayOneShot(doorCloseSFX);
+                audioSource.Play();
+                washTimer = washTime;
                 readyForNextWash = false;
             }
             else
             {
-                WashingMachineAudio.Stop();
-                WashingMachineAudio.PlayOneShot(DingSFX);
-                WashingMachineAudio.PlayOneShot(DoorOpenSFX);
-                readyForNextWash = true;
+                audioSource.Stop();
+                audioSource.PlayOneShot(dingSFX);
+                audioSource.PlayOneShot(doorOpenSFX);
             }
         }
 
@@ -227,7 +248,7 @@ namespace LethalWashing
         [ServerRpc(RequireOwnership = false)]
         public void RemoveItemFromDrumServerRpc(NetworkObjectReference netRef)
         {
-            if (!IsServerOrHost) { return; }
+            if (!IsServer) { return; }
             RemoveItemFromDrumClientRpc(netRef);
         }
 
@@ -242,7 +263,7 @@ namespace LethalWashing
         [ServerRpc(RequireOwnership = false)]
         public void AddItemToDrumServerRpc(NetworkObjectReference netRef)
         {
-            if (!IsServerOrHost) { return; }
+            if (!IsServer) { return; }
             AddItemToDrumClientRpc(netRef);
         }
 
@@ -254,39 +275,21 @@ namespace LethalWashing
             itemsInDrum.Add(obj);
         }
 
-        [ClientRpc]
-        public void DoAnimationClientRpc(string animationName, bool value)
-        {
-            animator.SetBool(animationName, value);
-        }
-
         [ServerRpc(RequireOwnership = false)]
         public void WashScrapServerRpc()
         {
-            if (!IsServerOrHost) { return; }
+            if (!IsServer) { return; }
             WashScrapClientRpc();
         }
 
         [ClientRpc]
         public void WashScrapClientRpc()
         {
-            washing = true;
             foreach (var item in itemsInDrum)
             {
                 item.grabbable = false;
             }
-            animator.SetBool("doorOpen", false);
-        }
-
-        [ClientRpc]
-        public void SpawnCoinFromHatchClientRpc(NetworkObjectReference netRef, int coinValue)
-        {
-            if (netRef.TryGet(out NetworkObject netObj))
-            {
-                CoinBehavior coin = netObj.GetComponent<CoinBehavior>();
-                if (coin == null) { LoggerInstance.LogError("Coin in hatch is null!"); return; }
-                coin.SetScrapValue(coinValue);
-            }
+            OpenDoor(false);
         }
     }
 }

@@ -1,0 +1,10 @@
+{
+  "LethalwashingUnlockableItemKeys": {
+    "__type": "DawnUnlockableItemInfo",
+    "WashingMachine": "lethalwashing:washingmachine"
+  },
+  "LethalwashingItemKeys": {
+    "__type": "DawnItemInfo",
+    "Coin": "lethalwashing:coin"
+  }
+}

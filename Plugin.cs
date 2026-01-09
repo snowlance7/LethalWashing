@@ -1,117 +1,60 @@
-using AmazingAssets.TerrainToMesh;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using Dawn;
+using Dusk;
 using GameNetcodeStuff;
 using HarmonyLib;
 using LethalLib.Extras;
-using LethalLib.Modules;
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace LethalWashing
 {
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
-    [BepInDependency(LethalLib.Plugin.ModGUID)]
+    [BepInDependency(DawnLib.PLUGIN_GUID)]
     public class Plugin : BaseUnityPlugin
     {
-        public static Plugin PluginInstance;
-        public static ManualLogSource LoggerInstance;
+#pragma warning disable CS8618
+        public static Plugin Instance {  get; private set; }
+        public static ManualLogSource logger { get; private set; }
+        public static DuskMod Mod { get; private set; }
+#pragma warning restore CS8618
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         public static PlayerControllerB localPlayer { get { return GameNetworkManager.Instance.localPlayerController; } }
         public static bool IsServerOrHost { get { return NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost; } }
         public static PlayerControllerB PlayerFromId(ulong id) { return StartOfRound.Instance.allPlayerScripts[StartOfRound.Instance.ClientPlayerList[id]]; }
 
-        public SpawnableMapObjectDef WashingMachineRef = null!;
-        public static AssetBundle ModAssets;
-        public GameObject CoinPrefab;
+        // TODO: Add configs: > to spit out one coin with combined value > blacklist config > config to turn off "prevent despawn on team wipe" > config to blacklist certain items from team wipe
 
-        // Configs
-#pragma warning disable CS8618 // TODO: Add configs: > to spit out one coin with combined value > blacklist config > config to turn off "prevent despawn on team wipe" > config to blacklist certain items from team wipe
-        public static ConfigEntry<float> configWashTime;
-        public static ConfigEntry<int> configMaxItemsInMachine;
-        public static ConfigEntry<float> configEjectDistance;
-
-        public static ConfigEntry<Vector3> configWorldPosition;
-        public static ConfigEntry<Quaternion> configWorldRotation;
-        public static ConfigEntry<Vector3> configGaletryWorldPosition;
-        public static ConfigEntry<Quaternion> configGaletryWorldRotation;
-#pragma warning restore CS8618
-
+        public UnityEvent OnShipLanded = new UnityEvent();
 
         private void Awake()
         {
-            if (PluginInstance == null)
+            if (Instance == null)
             {
-                PluginInstance = this;
+                Instance = this;
             }
 
-            LoggerInstance = PluginInstance.Logger;
+            logger = Instance.Logger;
 
             harmony.PatchAll();
 
+            AssetBundle? mainBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "scp3166_mainassets"));
+            Mod = DuskMod.RegisterMod(this, mainBundle);
+            Mod.RegisterContentHandlers();
+
             InitializeNetworkBehaviours();
 
-            // Configs
-
-            // General
-            configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap");
-            configMaxItemsInMachine = Config.Bind("General", "Max items in machine", 5, "How many items can fit in the machine at a time");
-            configEnableDebugging = Config.Bind("General", "Enable Debugging", false, "Shows debugging logs in the console");
-            configEjectDistance = Config.Bind("General", "Eject Distance", 5f, "How far the coins should eject from the washing machine");
-
-            configWorldPosition = Config.Bind("General", "World Position", new Vector3(-27.6681f, -2.5747f, -24.764f), "The world spawn position of the washing machine at the company. By default it spawns next to the sell counter");
-            configWorldRotation = Config.Bind("General", "World Rotation", Quaternion.Euler(0f, 90f, 0f), "The world spawn rotation of the washing machine at the company");
-
-            configGaletryWorldPosition = Config.Bind("General", "Galetry World Position", new Vector3(-65.2742f, 1.1536f, 20.3886f), "The world spawn position of the washing machine at Galetry. By default it spawns next to the sell counter");
-            configGaletryWorldRotation = Config.Bind("General", "Galetry World Rotation", Quaternion.Euler(0f, 180f, 0f), "The world spawn rotation of the washing machine at Galetry");
-
-            WashingMachine.worldPosition = configWorldPosition.Value;
-            WashingMachine.worldRotation = configWorldRotation.Value;
-
-            WashingMachine.worldPositionGaletry = configGaletryWorldPosition.Value;
-            WashingMachine.worldRotationGaletry = configGaletryWorldRotation.Value;
-
-            // Loading Assets
-            string sAssemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-            ModAssets = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "washing_assets"));
-            if (ModAssets == null)
-            {
-                Logger.LogError($"Failed to load custom assets.");
-                return;
-            }
-            LoggerInstance.LogDebug($"Got AssetBundle at: {Path.Combine(sAssemblyLocation, "washing_assets")}");
-
-            WashingMachineRef = ModAssets.LoadAsset<SpawnableMapObjectDef>("Assets/ModAssets/WashingMachine.asset");
-            if (WashingMachineRef == null) { LoggerInstance.LogError("Error: Couldnt get WashingMachine from assets"); return; }
-            LoggerInstance.LogDebug("Registering WashingMachine network prefab...");
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(WashingMachineRef.spawnableMapObject.prefabToSpawn);
-            LethalLib.Modules.Utilities.FixMixerGroups(WashingMachineRef.spawnableMapObject.prefabToSpawn);
-            LoggerInstance.LogDebug($"Registering WashingMachine");
-            MapObjects.RegisterMapObject(WashingMachineRef);
-
-            Item Coin = ModAssets.LoadAsset<Item>("Assets/ModAssets/CoinItem.asset");
-            if (Coin == null) { LoggerInstance.LogError("Error: Couldnt get CoinItem from assets"); return; }
-            LoggerInstance.LogDebug($"Got Coin prefab");
-
-            CoinPrefab = Coin.spawnPrefab;
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(Coin.spawnPrefab);
-            LethalLib.Modules.Utilities.FixMixerGroups(Coin.spawnPrefab);
-            LethalLib.Modules.Items.RegisterScrap(Coin);
+            //configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap");
+            //configMaxItemsInMachine = Config.Bind("General", "Max items in machine", 5, "How many items can fit in the machine at a time");
+            //configEjectDistance = Config.Bind("General", "Eject Distance", 5f, "How far the coins should eject from the washing machine");
 
             // Finished
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} has loaded!");
-        }
-
-        public static void logIfDebug(string message)
-        {
-            if (!configEnableDebugging.Value) { return; }
-            LoggerInstance.LogDebug(message);
         }
 
         private static void InitializeNetworkBehaviours()
@@ -129,7 +72,7 @@ namespace LethalWashing
                     }
                 }
             }
-            LoggerInstance.LogDebug("Finished initializing network behaviours");
+            logger.LogDebug("Finished initializing network behaviours");
         }
     }
 }
