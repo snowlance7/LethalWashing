@@ -13,7 +13,7 @@ namespace LethalWashing
 {
     public static class Utils
     {
-        public static bool isBeta = true;
+        public static bool isBeta = false;
         public static bool testing => _testing && isBeta;
         public static bool _testing = false;
 
@@ -56,6 +56,8 @@ namespace LethalWashing
 
         public static void ChatCommand(string[] args)
         {
+            if (!isBeta) { return; }
+
             switch (args[0])
             {
                 case "/spawning":
@@ -111,6 +113,9 @@ namespace LethalWashing
                     break;
                 case "/playerAnimations":
                     LogAnimatorParameters(localPlayer.playerBodyAnimator);
+                    break;
+                case "/quota":
+                    TimeOfDay.Instance.daysUntilDeadline = int.Parse(args[1]);
                     break;
                 default:
                     break;
@@ -783,23 +788,6 @@ namespace LethalWashing
         public static bool SpawnEnemiesOutsidePrefix()
         {
             if (Utils.isBeta && Utils.DEBUG_disableSpawning) { return false; }
-            return true;
-        }
-
-        [HarmonyPostfix, HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.firstDayAnimation))]
-        public static void firstDayAnimationPostfix()
-        {
-            if (!Utils.isBeta) { return; }
-            StartOfRound.Instance.speakerAudioSource.Stop();
-        }
-
-        [HarmonyPrefix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.PlayRandomClip))]
-        public static bool PlayRandomClipPrefix(AudioSource audioSource)
-        {
-            if (Utils.isBeta && audioSource == StartOfRound.Instance.shipAmbianceAudio)
-            {
-                return false;
-            }
             return true;
         }
     }

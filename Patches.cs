@@ -1,4 +1,5 @@
 using BepInEx.Logging;
+using Dusk;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace LethalWashing
     [HarmonyPatch]
     internal class Patches
     {
+        static string[] teamWipeBlacklist = [];
         static bool despawningProps = false;
 
         [HarmonyPrefix, HarmonyPatch(typeof(NetworkObject), nameof(NetworkObject.Despawn))]
@@ -22,6 +24,7 @@ namespace LethalWashing
                 if (!despawningProps) { return true; }
                 if (StartOfRound.Instance.firingPlayersCutsceneRunning) { return true; }
                 if (!__instance.TryGetComponent(out GrabbableObject grabObj)) { return true; }
+                if (teamWipeBlacklist.Contains(grabObj.itemProperties.name)) { return true; }
                 if (StartOfRound.Instance.isChallengeFile || (!grabObj.isHeld && !grabObj.isInShipRoom) || grabObj.deactivated) { return true; }
                 if (grabObj.scrapValue > 0) { return true; }
                 return false;
@@ -38,8 +41,9 @@ namespace LethalWashing
         {
             try
             {
-                if (!IsServerOrHost) { return; }
-                despawningProps = true;
+                despawningProps = Configs.PreventDespawnOnTeamWipe;
+                if (!despawningProps) { return; }
+                teamWipeBlacklist = Configs.TeamWipeBlacklist.Replace(" ", "").Split(",");
             }
             catch (System.Exception e)
             {
@@ -51,30 +55,7 @@ namespace LethalWashing
         [HarmonyPostfix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
         public static void DespawnPropsAtEndOfRoundPostfix(RoundManager __instance)
         {
-            try
-            {
-                if (!IsServerOrHost) { return; }
-                despawningProps = false;
-            }
-            catch (System.Exception e)
-            {
-                logger.LogError(e);
-                return;
-            }
-        }
-
-        [HarmonyPostfix, HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnShipLandedMiscEvents))]
-        public static void OnShipLandedMiscEventsPostfix()
-        {
-            try
-            {
-                Plugin.Instance.OnShipLanded.Invoke();
-            }
-            catch (System.Exception e)
-            {
-                logger.LogError(e);
-                return;
-            }
+            despawningProps = false;
         }
     }
 }

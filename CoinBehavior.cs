@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Dusk;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
@@ -13,12 +14,13 @@ namespace LethalWashing
         public AnimationCurve grenadeVerticalFallCurveNoBounce;
         public AudioSource audioSource;
 #pragma warning restore CS8618
+
         public List<AudioClip> coinDropSFXs = [];
 
         Ray grenadeThrowRay;
         RaycastHit grenadeHit;
         const int stunGrenadeMask = 268437761;
-        const float ejectDistance = 1f;
+        const float ejectDistance = 3.5f;
 
         public override void Start()
         {
@@ -30,7 +32,7 @@ namespace LethalWashing
         public override void ItemActivate(bool used, bool buttonDown = true)
         {
             base.ItemActivate(used, buttonDown);
-            playerHeldBy.DiscardHeldObject(placeObject: true, null, GetGrenadeThrowDestination(playerHeldBy.gameplayCamera.transform));
+            playerHeldBy.DiscardHeldObject(placeObject: true, null, GetGrenadeThrowDestination(playerHeldBy.gameplayCamera.transform, Configs.ThrowDistance));
         }
 
         public void EjectFromWashingMachine(Transform ejectFrom)
@@ -43,7 +45,7 @@ namespace LethalWashing
             fallTime = 0f;
         }
 
-        public Vector3 GetGrenadeThrowDestination(Transform ejectPoint, float _throwDistance = 10f)
+        public Vector3 GetGrenadeThrowDestination(Transform ejectPoint, float _throwDistance)
         {
             Vector3 position = base.transform.position;
             grenadeThrowRay = new Ray(ejectPoint.position, ejectPoint.forward);

@@ -1,3 +1,4 @@
+using Dawn;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
@@ -24,7 +25,8 @@ namespace LethalWashing
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
         {
-            if (!Utils.testing) { return; }
+            if (!Utils.testing || !Utils.isBeta) { return; }
+            //WashingMachine.Instance?.SpawnCoin(10);
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.SubmitChat_performed))]
@@ -32,10 +34,15 @@ namespace LethalWashing
         {
             string msg = __instance.chatTextField.text;
             string[] args = msg.Split(" ");
-            logger.LogDebug(msg);
 
             switch (args[0])
             {
+                case "/lw_items":
+                    foreach (var item in LethalContent.Items.Values)
+                    {
+                        logger.LogInfo(item.Item.name);
+                    }
+                    break;
                 default:
                     Utils.ChatCommand(args);
                     break;

@@ -1,7 +1,7 @@
 {
   "LethalwashingUnlockableItemKeys": {
     "__type": "DawnUnlockableItemInfo",
-    "WashingMachine": "lethalwashing:washingmachine"
+    "WashingMachine": "lethalwashing:washing_machine"
   },
   "LethalwashingItemKeys": {
     "__type": "DawnItemInfo",

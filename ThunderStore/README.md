@@ -1,6 +1,6 @@
 # Wash your scrap!
 
-This mod spawns a washing machine at the company. You can put any scrap inside the machine to 'wash' it. Doing so will remove its value and make it so that item will not despawn from the ship when the team wipes. It will give you a coin worth the value of that scrap that you can sell.
+This mod adds a washing machine ship furniture. You can put any scrap inside the machine to 'wash' it. Doing so will remove its value and make it so that item will not despawn from the ship when the team wipes. It will give you a coin worth the value of that scrap that you can sell.
 
 ## Contact
 

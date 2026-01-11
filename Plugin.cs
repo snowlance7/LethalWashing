@@ -28,10 +28,6 @@ namespace LethalWashing
         public static bool IsServerOrHost { get { return NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost; } }
         public static PlayerControllerB PlayerFromId(ulong id) { return StartOfRound.Instance.allPlayerScripts[StartOfRound.Instance.ClientPlayerList[id]]; }
 
-        // TODO: Add configs: > to spit out one coin with combined value > blacklist config > config to turn off "prevent despawn on team wipe" > config to blacklist certain items from team wipe
-
-        public UnityEvent OnShipLanded = new UnityEvent();
-
         private void Awake()
         {
             if (Instance == null)
@@ -48,10 +44,6 @@ namespace LethalWashing
             Mod.RegisterContentHandlers();
 
             InitializeNetworkBehaviours();
-
-            //configWashTime = Config.Bind("General", "Wash Time", 10f, "Time it takes for the washing machine to finish washing scrap");
-            //configMaxItemsInMachine = Config.Bind("General", "Max items in machine", 5, "How many items can fit in the machine at a time");
-            //configEjectDistance = Config.Bind("General", "Eject Distance", 5f, "How far the coins should eject from the washing machine");
 
             // Finished
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} has loaded!");

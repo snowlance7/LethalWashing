@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: WashingMachineDef
   m_EditorClassIdentifier: 
   _configEntries:
-  - settingName: Wash Time
+  - settingName: Washing Machine | Wash Time
     DynamicConfigType: 2
     defaultString: 
     defaultInt: 0
@@ -28,8 +28,8 @@ MonoBehaviour:
       m_PreInfinity: 0
       m_PostInfinity: 0
       m_RotationOrder: 0
-    Description: Time it takes for the machine to wash scrap
-  - settingName: Usable Only On Company Day
+    Description: Time it takes for the machine to wash scrap.
+  - settingName: Washing Machine | Usable Only On Company Day
     DynamicConfigType: 3
     defaultString: 
     defaultInt: 0
@@ -45,8 +45,8 @@ MonoBehaviour:
       m_PostInfinity: 0
       m_RotationOrder: 0
     Description: When enabled, the washing machine will only be able to wash scrap
-      on the last day of quota
-  - settingName: Combine Coin Values
+      on the last day of quota.
+  - settingName: Washing Machine | Combine Coin Values
     DynamicConfigType: 3
     defaultString: 
     defaultInt: 0
@@ -62,8 +62,8 @@ MonoBehaviour:
       m_PostInfinity: 0
       m_RotationOrder: 0
     Description: When enabled, will combine the total value of all scrap in the machine 
-      and split it between a select amount of counts
-  - settingName: Coins To Spawn
+      and split it between a select amount of counts.
+  - settingName: Washing Machine | Coins To Spawn
     DynamicConfigType: 1
     defaultString: 
     defaultInt: 1
@@ -78,13 +78,69 @@ MonoBehaviour:
       m_PreInfinity: 0
       m_PostInfinity: 0
       m_RotationOrder: 0
-    Description: How many coins to spawn when using the combine coin values config
+    Description: How many coins to spawn when using the combine coin values config.
+  - settingName: Washing Machine | Blacklist
+    DynamicConfigType: 0
+    defaultString: Coin
+    defaultInt: 1
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: 'Which scrap items to blacklist from washing. Format: "item1,item2,item3"
+      etc. Must be the `itemProperties.name` of the item. Names are case sensitive.
+      You can log a list of these names on the bepinex console by using "/lw_items"
+      in the ingame chat. Make sure to have "info" logs enabled.'
+  - settingName: Washing Machine | Prevent Despawn On Team Wipe
+    DynamicConfigType: 3
+    defaultString: Coin
+    defaultInt: 1
+    defaultFloat: 0
+    defaultBool: 1
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: If enabled, any scrap with no value will be kept on team wipe. This
+      does not include when team is fired.
+  - settingName: Washing Machine | Team Wipe Blacklist
+    DynamicConfigType: 0
+    defaultString: 
+    defaultInt: 1
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: 'Which scrap items are blacklisted from being kept on team wipe.
+      Format: "item1,item2,item3" etc. Must be the `itemProperties.name` of the item.
+      Names are case sensitive. You can log a list of these names on the bepinex
+      console by using "/lw_items" in the ingame chat. Make sure to have "info" logs
+      enabled.'
   _tags: []
   <Key>k__BackingField:
     _namespace: lethalwashing
-    _key: washingmachine
+    _key: washing_machine
   <UnlockableItem>k__BackingField:
-    unlockableName: WashingMachine
+    unlockableName: Washing Machine
     prefabObject: {fileID: 7935419982241718248, guid: 4ed61f765d4e4424883890896d7eeb7a,
       type: 3}
     unlockableType: 0
@@ -110,7 +166,7 @@ MonoBehaviour:
   <PricingStrategy>k__BackingField: {fileID: 0}
   <IsShipUpgrade>k__BackingField: 1
   <IsDecor>k__BackingField: 1
-  <GenerateUnlockableTypeConfig>k__BackingField: 1
+  <GenerateUnlockableTypeConfig>k__BackingField: 0
   <Cost>k__BackingField: 0
   <GenerateDisablePricingStrategyConfig>k__BackingField: 0
   <GenerateDisableUnlockRequirementConfig>k__BackingField: 0
