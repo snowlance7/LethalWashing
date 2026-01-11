@@ -35,14 +35,9 @@ namespace LethalWashing
 
         public void EjectFromWashingMachine(Transform ejectFrom)
         {
-            logger.LogDebug("ejectFrom.position: " + ejectFrom.position);
-            logger.LogDebug("ejectFrom.transform.position: " + ejectFrom.transform.position);
-            logger.LogDebug("transform.position" + transform.position);
             startFallingPosition = transform.position;
-            logger.LogDebug("Start: " + startFallingPosition);
 
-            targetFloorPosition = GetGrenadeThrowDestination(ejectFrom, ejectDistance); // -21.4333 -2.6356 -25.0231
-            logger.LogDebug("End: " + targetFloorPosition);
+            targetFloorPosition = GetGrenadeThrowDestination(ejectFrom, ejectDistance);
 
             hasHitGround = false;
             fallTime = 0f;
@@ -53,17 +48,15 @@ namespace LethalWashing
             Vector3 position = base.transform.position;
             grenadeThrowRay = new Ray(ejectPoint.position, ejectPoint.forward);
 
-            // Adjusted throw distance
             if (!Physics.Raycast(grenadeThrowRay, out grenadeHit, _throwDistance, stunGrenadeMask, QueryTriggerInteraction.Ignore))
             {
-                position = grenadeThrowRay.GetPoint(_throwDistance - 2f); // Adjust target point
+                position = grenadeThrowRay.GetPoint(_throwDistance - 2f);
             }
             else
             {
                 position = grenadeThrowRay.GetPoint(grenadeHit.distance - 0.05f);
             }
 
-            // Second raycast downward to find the ground
             grenadeThrowRay = new Ray(position, Vector3.down);
             if (Physics.Raycast(grenadeThrowRay, out grenadeHit, 30f, stunGrenadeMask, QueryTriggerInteraction.Ignore))
             {
@@ -74,7 +67,6 @@ namespace LethalWashing
                 position = grenadeThrowRay.GetPoint(30f);
             }
 
-            // Add randomness
             position += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
 
             return position;
@@ -82,25 +74,15 @@ namespace LethalWashing
 
         public override void FallWithCurve()
         {
-            // Log initial state
-            logger.LogDebug($"cFallWithCurve called. Start Position: {startFallingPosition}, Target Position: {targetFloorPosition}, Initial cfallTime: {fallTime}");
-
             float magnitude = (startFallingPosition - targetFloorPosition).magnitude;
-            logger.LogDebug($"Calculated magnitude: {magnitude}");
 
-            // Log rotation interpolation
             Quaternion targetRotation = Quaternion.Euler(itemProperties.restingRotation.x, base.transform.eulerAngles.y, itemProperties.restingRotation.z);
             base.transform.rotation = Quaternion.Lerp(base.transform.rotation, targetRotation, 14f * Time.deltaTime / magnitude);
-            logger.LogDebug($"Updated rotation to: {base.transform.rotation.eulerAngles}");
 
-            // Log position interpolation for primary fall
             base.transform.localPosition = Vector3.Lerp(startFallingPosition, targetFloorPosition, grenadeFallCurve.Evaluate(fallTime));
-            logger.LogDebug($"Updated primary fall position to: {base.transform.localPosition}");
 
-            // Conditional logging for vertical fall curve
             if (magnitude > 5f)
             {
-                logger.LogDebug("Magnitude > 5, using grenadeVerticalFallCurveNoBounce.");
                 base.transform.localPosition = Vector3.Lerp(
                     new Vector3(base.transform.localPosition.x, startFallingPosition.y, base.transform.localPosition.z),
                     new Vector3(base.transform.localPosition.x, targetFloorPosition.y, base.transform.localPosition.z),
@@ -109,7 +91,6 @@ namespace LethalWashing
             }
             else
             {
-                logger.LogDebug("Magnitude <= 5, using grenadeVerticalFallCurve.");
                 base.transform.localPosition = Vector3.Lerp(
                     new Vector3(base.transform.localPosition.x, startFallingPosition.y, base.transform.localPosition.z),
                     new Vector3(base.transform.localPosition.x, targetFloorPosition.y, base.transform.localPosition.z),
@@ -117,17 +98,12 @@ namespace LethalWashing
                 );
             }
 
-            // Log updated position and fallTime
-            logger.LogDebug($"Updated local position after vertical fall: {base.transform.localPosition}");
-
             fallTime += Mathf.Abs(Time.deltaTime * 12f / magnitude);
-            logger.LogDebug($"Updated cfallTime to: {fallTime}");
         }
 
         public override void OnHitGround()
         {
             base.OnHitGround();
-            logger.LogDebug("Hit ground");
             RoundManager.PlayRandomClip(audioSource, coinDropSFXs.ToArray());
         }
 

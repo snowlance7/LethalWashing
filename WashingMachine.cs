@@ -7,8 +7,6 @@ using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
 
-// TODO: To fix items breaking when put in the washing machine, do what vanilla lethal company does to items when pocketing them!
-
 namespace LethalWashing
 {
     public class WashingMachine : NetworkBehaviour
@@ -36,7 +34,7 @@ namespace LethalWashing
         public PlaceableShipObject placeableShipObject;
 #pragma warning restore CS8618
 
-        bool LocalPlayerHoldingScrap { get { return localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap; } }
+        bool localPlayerHoldingScrap { get { return localPlayer.isHoldingObject && localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap; } }
 
         public List<GrabbableObject> itemsInDrum = [];
         bool washing => washTimer > 0;
@@ -45,12 +43,13 @@ namespace LethalWashing
         bool usable => TimeOfDay.Instance.daysUntilDeadline <= 0 || !usableOnlyOnCompanyDay;
         bool doorOpen;
 
-        // Configs // TODO: Set up
-        float washTime = 10f;
-        bool usableOnlyOnCompanyDay = true;
-        bool combineCoinValues = false;
-        int coinsToSpawn = 1;
-        //bool spawnLasagnaWhenSpawned => ContentHandler<SCP3166ContentHandler>.Instance.SCP3166.GetConfig<bool>("Spawn Lasagna When Spawned").Value;
+        bool closedUntilCompanyDay = true;
+
+        // Configs
+        float washTime => ContentHandler<LethalWashingContentHandler>.Instance.WashingMachine!.GetConfig<float>("Wash Time").Value;
+        bool usableOnlyOnCompanyDay => ContentHandler<LethalWashingContentHandler>.Instance.WashingMachine!.GetConfig<bool>("Usable Only On Company Day").Value;
+        bool combineCoinValues => ContentHandler<LethalWashingContentHandler>.Instance.WashingMachine!.GetConfig<bool>("Combine Coin Values").Value;
+        int coinsToSpawn => ContentHandler<LethalWashingContentHandler>.Instance.WashingMachine!.GetConfig<int>("Coins To Spawn").Value;
 
 
         public void Start()
@@ -76,12 +75,12 @@ namespace LethalWashing
             }
 
             doorCollider.enabled = !washing && doorOpen && itemsInDrum.Count > 0 && readyForNextWash && usable && localPlayer.currentlyHeldObjectServer == null;
-            drumCollider.enabled = !washing && readyForNextWash;
-            drumTrigger.interactable = !washing && doorOpen && readyForNextWash && usable && LocalPlayerHoldingScrap;
+            drumCollider.enabled = !washing && readyForNextWash && localPlayer.currentlyHeldObjectServer != null;
+            drumTrigger.interactable = !washing && doorOpen && readyForNextWash && usable && localPlayerHoldingScrap;
 
             foreach (var item in itemsInDrum.ToList())
             {
-                if (item.isHeld) { itemsInDrum.Remove(item); }
+                if (item.isHeld || item.playerHeldBy != null) { itemsInDrum.Remove(item); }
             }
 
             if (!readyForNextWash && itemsInDrum.Count <= 0)
@@ -94,15 +93,22 @@ namespace LethalWashing
                 if (itemsInDrum.Count <= 0 && doorOpen)
                 {
                     OpenDoor(false);
-                    drumTrigger.disabledHoverTip = "Notice: No washing until company day";
+                    closedUntilCompanyDay = true;
                 }
+                drumTrigger.disabledHoverTip = "No washing until company day";
+            }
+
+            if (usable && closedUntilCompanyDay)
+            {
+                closedUntilCompanyDay = false;
+                OpenDoor(true);
             }
 
             if (!washing) // Default state
             {
                 if (localPlayer.currentlyHeldObjectServer != null) // Player is holding item
                 {
-                    if (LocalPlayerHoldingScrap) // Player is holding scrap
+                    if (localPlayerHoldingScrap) // Player is holding scrap
                     {
                         drumTrigger.hoverTip = "Add Scrap [E]";
                         //drumCollider.enabled = true;
@@ -165,7 +171,7 @@ namespace LethalWashing
                 item.grabbable = true;
             }
 
-            if (scrapValues.Count == 0) { return; }
+            if (scrapValues.Count == 0) { logger.LogDebug("No scrap values"); return; }
             SpawnCoins(scrapValues);
         }
 
@@ -189,22 +195,23 @@ namespace LethalWashing
                 }
             }
 
-            IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
+            logger.LogDebug($"Spawning {values.Count} coins");
+            StartCoroutine(SpawnCoinsCoroutine(values));
+        }
+
+        IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
+        {
+            animator.SetBool("hatchOpen", true);
+            yield return new WaitForSeconds(1.5f);
+
+            foreach (var coinValue in coinValues)
             {
-                animator.SetBool("hatchOpen", true);
-                yield return new WaitForSeconds(1.5f);
-
-                foreach (var coinValue in coinValues)
-                {
-                    if (coinValue <= 0) { continue; }
-                    SpawnCoin(coinValue);
-                    yield return new WaitForSeconds(0.1f);
-                }
-
-                animator.SetBool("hatchOpen", false);
+                if (coinValue <= 0) { continue; }
+                SpawnCoin(coinValue);
+                yield return new WaitForSeconds(0.1f);
             }
 
-            StartCoroutine(SpawnCoinsCoroutine(values));
+            animator.SetBool("hatchOpen", false);
         }
 
         void SpawnCoin(int value)
@@ -222,17 +229,19 @@ namespace LethalWashing
         public void AddScrapToWasher() // InteractTrigger
         {
             GrabbableObject item = localPlayer.currentlyHeldObjectServer;
-            localPlayer.DiscardHeldObject(true, null, drumPosition.position);
+            if (!localPlayerHoldingScrap || localPlayer.isGrabbingObjectAnimation) { return; }
+            //localPlayer.DiscardHeldObject(true, null, drumPosition.position);
+            localPlayer.DiscardHeldObject(true, NetworkObject, NetworkObject.transform.InverseTransformPoint(drumPosition.position), false);
             AddItemToDrumServerRpc(item.NetworkObject);
         }
 
         public void PlayDoorSFX() // Animation
         {
+            if (!usable) { return; }
             if (washing)
             {
                 audioSource.PlayOneShot(doorCloseSFX);
                 audioSource.Play();
-                washTimer = washTime;
                 readyForNextWash = false;
             }
             else
@@ -244,21 +253,6 @@ namespace LethalWashing
         }
 
         // RPCs
-
-        [ServerRpc(RequireOwnership = false)]
-        public void RemoveItemFromDrumServerRpc(NetworkObjectReference netRef)
-        {
-            if (!IsServer) { return; }
-            RemoveItemFromDrumClientRpc(netRef);
-        }
-
-        [ClientRpc]
-        public void RemoveItemFromDrumClientRpc(NetworkObjectReference netRef)
-        {
-            if (!netRef.TryGet(out NetworkObject netObj)) { return; }
-            if (!netObj.TryGetComponent(out GrabbableObject obj)) { return; }
-            itemsInDrum.Remove(obj);
-        }
 
         [ServerRpc(RequireOwnership = false)]
         public void AddItemToDrumServerRpc(NetworkObjectReference netRef)
@@ -290,6 +284,7 @@ namespace LethalWashing
                 item.grabbable = false;
             }
             OpenDoor(false);
+            washTimer = washTime;
         }
     }
 }

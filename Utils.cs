@@ -109,8 +109,27 @@ namespace LethalWashing
                     RoundManager.Instance.currentLevel.planetHasTime = !RoundManager.Instance.currentLevel.planetHasTime;
                     HUDManager.Instance.DisplayTip("planetHasTime", RoundManager.Instance.currentLevel.planetHasTime.ToString());
                     break;
+                case "/playerAnimations":
+                    LogAnimatorParameters(localPlayer.playerBodyAnimator);
+                    break;
                 default:
                     break;
+            }
+        }
+
+        public static void LogAnimatorParameters(Animator animator)
+        {
+            if (animator == null) return;
+
+            logger.LogDebug($"Animator on {animator.gameObject.name}");
+
+            foreach (var param in animator.parameters)
+            {
+                logger.LogDebug(
+                    $"Name: {param.name} | " +
+                    $"Type: {param.type} | " +
+                    $"Hash: {param.nameHash}"
+                );
             }
         }
 
@@ -665,14 +684,36 @@ namespace LethalWashing
             return position;
         }
 
-        public static GrabbableObject? SpawnItem(NamespacedKey<DawnItemInfo> key, Vector3 position, Quaternion rotation = default, float fallTime = 0f)
+        public static GrabbableObject? SpawnItem(NamespacedKey<DawnItemInfo> key, Vector3 position, Quaternion rotation = default, Transform? parentTo = null, float fallTime = 0f)
         {
             if (!IsServerOrHost) { return null; }
-            GameObject obj = GameObject.Instantiate(LethalContent.Items[key].Item.spawnPrefab, position, rotation, RoundManager.Instance.mapPropsContainer.transform);
+            GameObject obj = GameObject.Instantiate(LethalContent.Items[key].Item.spawnPrefab, position, rotation, parentTo);
             GrabbableObject grabObj = obj.GetComponent<GrabbableObject>();
             grabObj.fallTime = fallTime;
             grabObj.NetworkObject.Spawn();
             return grabObj;
+        }
+
+        public static Vector3 GetRandomPositionInRadius(Vector3 center, float radius)
+        {
+            Vector2 randomCircle = UnityEngine.Random.insideUnitCircle * radius;
+            return center + new Vector3(randomCircle.x, 0f, randomCircle.y);
+        }
+
+        public static Vector3 GetRandomPositionInRadius(Vector3 center, float radius, float y)
+        {
+            Vector2 randomCircle = UnityEngine.Random.insideUnitCircle * radius;
+            return new Vector3(
+                center.x + randomCircle.x,
+                y,
+                center.z + randomCircle.y
+            );
+        }
+
+        public static Vector3 GetRandomPositionOnRadius(Vector3 center, float radius)
+        {
+            Vector2 direction = UnityEngine.Random.insideUnitCircle.normalized;
+            return center + new Vector3(direction.x, 0f, direction.y) * radius;
         }
 
         public static T GetRandom<T>(this IEnumerable<T> source, System.Random random)
@@ -742,6 +783,23 @@ namespace LethalWashing
         public static bool SpawnEnemiesOutsidePrefix()
         {
             if (Utils.isBeta && Utils.DEBUG_disableSpawning) { return false; }
+            return true;
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.firstDayAnimation))]
+        public static void firstDayAnimationPostfix()
+        {
+            if (!Utils.isBeta) { return; }
+            StartOfRound.Instance.speakerAudioSource.Stop();
+        }
+
+        [HarmonyPrefix, HarmonyPatch(typeof(RoundManager), nameof(RoundManager.PlayRandomClip))]
+        public static bool PlayRandomClipPrefix(AudioSource audioSource)
+        {
+            if (Utils.isBeta && audioSource == StartOfRound.Instance.shipAmbianceAudio)
+            {
+                return false;
+            }
             return true;
         }
     }

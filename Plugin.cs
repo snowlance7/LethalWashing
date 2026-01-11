@@ -43,7 +43,7 @@ namespace LethalWashing
 
             harmony.PatchAll();
 
-            AssetBundle? mainBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "scp3166_mainassets"));
+            AssetBundle? mainBundle = AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Info.Location), "lethalwashing_mainassets"));
             Mod = DuskMod.RegisterMod(this, mainBundle);
             Mod.RegisterContentHandlers();
 

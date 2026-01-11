@@ -12,14 +12,80 @@ MonoBehaviour:
   m_Script: {fileID: 1963577118, guid: 41d6645f64e86c743812eb594070972f, type: 3}
   m_Name: WashingMachineDef
   m_EditorClassIdentifier: 
-  _configEntries: []
+  _configEntries:
+  - settingName: Wash Time
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 10
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: Time it takes for the machine to wash scrap
+  - settingName: Usable Only On Company Day
+    DynamicConfigType: 3
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 1
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: When enabled, the washing machine will only be able to wash scrap
+      on the last day of quota
+  - settingName: Combine Coin Values
+    DynamicConfigType: 3
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: When enabled, will combine the total value of all scrap in the machine 
+      and split it between a select amount of counts
+  - settingName: Coins To Spawn
+    DynamicConfigType: 1
+    defaultString: 
+    defaultInt: 1
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    Description: How many coins to spawn when using the combine coin values config
   _tags: []
   <Key>k__BackingField:
     _namespace: lethalwashing
     _key: washingmachine
   <UnlockableItem>k__BackingField:
     unlockableName: WashingMachine
-    prefabObject: {fileID: 7935419982241718248, guid: 1348d91856849a2408648e6ee0e273cb,
+    prefabObject: {fileID: 7935419982241718248, guid: 4ed61f765d4e4424883890896d7eeb7a,
       type: 3}
     unlockableType: 0
     shopSelectionNode: {fileID: 0}
@@ -28,15 +94,15 @@ MonoBehaviour:
     hasBeenMoved: 0
     placedPosition: {x: 0, y: 0, z: 0}
     placedRotation: {x: 0, y: 0, z: 0}
-    inStorage: 1
+    inStorage: 0
     canBeStored: 1
     maxNumber: 1
-    hasBeenUnlockedByPlayer: 1
+    hasBeenUnlockedByPlayer: 0
     suitMaterial: {fileID: 0}
     headCostumeObject: {fileID: 0}
     lowerTorsoCostumeObject: {fileID: 0}
-    alreadyUnlocked: 1
-    unlockedInChallengeFile: 1
+    alreadyUnlocked: 0
+    unlockedInChallengeFile: 0
     spawnPrefab: 1
     jumpAudio: {fileID: 0}
   <InfoNodeText>k__BackingField: Washing Machine to wash your scrap!
