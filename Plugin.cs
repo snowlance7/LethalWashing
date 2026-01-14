@@ -1,16 +1,13 @@
 using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Logging;
 using Dawn;
 using Dusk;
 using GameNetcodeStuff;
 using HarmonyLib;
-using LethalLib.Extras;
 using System.IO;
 using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace LethalWashing
 {

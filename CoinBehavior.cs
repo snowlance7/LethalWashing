@@ -1,4 +1,5 @@
-﻿using Dusk;
+﻿using Dawn.Utils;
+using Dusk;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -15,6 +16,9 @@ namespace LethalWashing
         public AudioSource audioSource;
 #pragma warning restore CS8618
 
+        static System.Random? coinRandom;
+        BoundedRange coinFallRange = new BoundedRange(-1f, 1f);
+
         public List<AudioClip> coinDropSFXs = [];
 
         Ray grenadeThrowRay;
@@ -22,11 +26,13 @@ namespace LethalWashing
         const int stunGrenadeMask = 268437761;
         const float ejectDistance = 3.5f;
 
+        bool loadingIn;
+
         public override void Start()
         {
             base.Start();
-            if (WashingMachine.Instance == null) { return; }
-            EjectFromWashingMachine(WashingMachine.Instance.coinSpawn);
+            if (WashingMachine.Instance != null && !loadingIn)
+                EjectFromWashingMachine();
         }
 
         public override void ItemActivate(bool used, bool buttonDown = true)
@@ -35,11 +41,11 @@ namespace LethalWashing
             playerHeldBy.DiscardHeldObject(placeObject: true, null, GetGrenadeThrowDestination(playerHeldBy.gameplayCamera.transform, Configs.ThrowDistance));
         }
 
-        public void EjectFromWashingMachine(Transform ejectFrom)
+        public void EjectFromWashingMachine()
         {
             startFallingPosition = transform.position;
 
-            targetFloorPosition = GetGrenadeThrowDestination(ejectFrom, ejectDistance);
+            targetFloorPosition = GetGrenadeThrowDestination(WashingMachine.Instance!.coinSpawn, ejectDistance);
 
             hasHitGround = false;
             fallTime = 0f;
@@ -69,9 +75,17 @@ namespace LethalWashing
                 position = grenadeThrowRay.GetPoint(30f);
             }
 
-            position += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
+            if (coinRandom == null)
+                coinRandom = new System.Random(StartOfRound.Instance.randomMapSeed);
+
+            position += new Vector3(coinFallRange.GetRandomInRange(coinRandom), 0f, coinFallRange.GetRandomInRange(coinRandom));
 
             return position;
+        }
+
+        public override void LoadItemSaveData(int saveData)
+        {
+            loadingIn = true;
         }
 
         public override void FallWithCurve()
@@ -106,7 +120,9 @@ namespace LethalWashing
         public override void OnHitGround()
         {
             base.OnHitGround();
+            logger.LogDebug("OnHitGround");
             RoundManager.PlayRandomClip(audioSource, coinDropSFXs.ToArray());
+            //transform.SetParent(StartOfRound.Instance.propsContainer);
         }
 
         [ClientRpc]

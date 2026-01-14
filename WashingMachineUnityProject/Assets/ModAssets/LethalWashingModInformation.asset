@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   <AuthorName>k__BackingField: Snowlance
   <ModName>k__BackingField: LethalWashing
-  <Version>k__BackingField: 1.3.0
-  <READMEFile>k__BackingField: {fileID: 4900000, guid: 448d73351492b8d4f969aa760bfea936,
+  <Version>k__BackingField: 1.3.1
+  <READMEFile>k__BackingField: {fileID: 4900000, guid: 58abfd1fefa54df4bb2ff5ee89e324a2,
     type: 3}
-  <ChangelogFile>k__BackingField: {fileID: 4900000, guid: 458dac6470a41ea49a1784c0ff4529c6,
+  <ChangelogFile>k__BackingField: {fileID: 4900000, guid: 2dab1c43b13601d42b918b176a1ca83b,
     type: 3}
   <ModDescription>k__BackingField: Prevents scrap with 0 scrap value from despawning
     on team wipe and adds a washing machine to convert scrap value on items into

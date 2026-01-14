@@ -127,11 +127,11 @@ BoxCollider:
     m_Bits: 0
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
-  m_ProvidesContacts: 1
+  m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5.6500707, y: 1.1642088, z: 5.713456}
-  m_Center: {x: 0.1077585, y: 0.6208473, z: -0.020563852}
+  m_Size: {x: 7.742693, y: 1.9912475, z: 8.248094}
+  m_Center: {x: -0.040902946, y: 0.7139993, z: -0.07675216}
 --- !u!82 &255216902324057214
 AudioSource:
   m_ObjectHideFlags: 0

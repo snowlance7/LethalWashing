@@ -1,5 +1,12 @@
-## 1.3.0
+## 1.3.1
+- Made coin grab collider bigger
+- Bug fixes
 
+## 1.3.0
+- Migrating from LethalLib to Dawnlib
+- Washing Machine is now a ship furniture that only washes scrap on company day (configurable)
+- Added more configs
+- Bug fixes
 
 ## 1.2.4
 - Updated for v73
