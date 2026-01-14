@@ -207,7 +207,7 @@ namespace LethalWashing
         public void SpawnCoin(int value)
         {
             if (!IsServer) { return; }
-            CoinBehavior coin = Utils.SpawnItem(LethalWashingKeys.Coin, coinSpawn.transform.position, coinSpawn.transform.rotation, RoundManager.Instance.mapPropsContainer.transform)!.GetComponentInChildren<CoinBehavior>();
+            CoinBehavior coin = Utils.SpawnItem(LethalWashingKeys.Coin, coinSpawn.transform.position, coinSpawn.transform.rotation)!.GetComponentInChildren<CoinBehavior>();
             coin.SetScrapValueClientRpc(value);
         }
 

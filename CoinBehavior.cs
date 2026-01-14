@@ -26,12 +26,12 @@ namespace LethalWashing
         const int stunGrenadeMask = 268437761;
         const float ejectDistance = 3.5f;
 
-        bool loadingIn;
+        public bool ejectingFromWashingMachine;
 
         public override void Start()
         {
             base.Start();
-            if (WashingMachine.Instance != null && !loadingIn)
+            if (WashingMachine.Instance != null && ejectingFromWashingMachine)
                 EjectFromWashingMachine();
         }
 
@@ -43,6 +43,7 @@ namespace LethalWashing
 
         public void EjectFromWashingMachine()
         {
+            logger.LogDebug("EjectFromWashingMachine");
             startFallingPosition = transform.position;
 
             targetFloorPosition = GetGrenadeThrowDestination(WashingMachine.Instance!.coinSpawn, ejectDistance);
@@ -75,17 +76,12 @@ namespace LethalWashing
                 position = grenadeThrowRay.GetPoint(30f);
             }
 
-            if (coinRandom == null)
-                coinRandom = new System.Random(StartOfRound.Instance.randomMapSeed);
+            //if (coinRandom == null) coinRandom = new System.Random(StartOfRound.Instance.randomMapSeed);
 
-            position += new Vector3(coinFallRange.GetRandomInRange(coinRandom), 0f, coinFallRange.GetRandomInRange(coinRandom));
+            //position += new Vector3(coinFallRange.GetRandomInRange(coinRandom), 0f, coinFallRange.GetRandomInRange(coinRandom));
+            position += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
 
             return position;
-        }
-
-        public override void LoadItemSaveData(int saveData)
-        {
-            loadingIn = true;
         }
 
         public override void FallWithCurve()
@@ -128,7 +124,9 @@ namespace LethalWashing
         [ClientRpc]
         public void SetScrapValueClientRpc(int setValueTo)
         {
+            logger.LogDebug("SetScrapValueClientRpc");
             SetScrapValue(setValueTo);
+            ejectingFromWashingMachine = true;
         }
     }
 }
