@@ -8,6 +8,10 @@ using UnityEngine;
 using static LethalWashing.Plugin;
 using static LethalWashing.Configs;
 
+// TODO: Add button on side of washing machine to destroy it and all items inside it (put in storage)
+// TODO: If you put a maneater inside the washing machine, it grows up inside it and turns into a washing machine maneater enemy!
+// TODO: Fix easter egg bug?
+
 namespace LethalWashing
 {
     public class WashingMachine : NetworkBehaviour
@@ -77,7 +81,7 @@ namespace LethalWashing
 
             foreach (var item in itemsInDrum.ToList())
             {
-                if (item.isHeld || item.playerHeldBy != null) { itemsInDrum.Remove(item); }
+                if (item == null || item.isHeld || item.playerHeldBy != null) { itemsInDrum.Remove(item); }
             }
 
             if (!readyForNextWash && itemsInDrum.Count <= 0)
@@ -223,6 +227,16 @@ namespace LethalWashing
             //localPlayer.DiscardHeldObject(true, null, drumPosition.position);
             localPlayer.DiscardHeldObject(true, NetworkObject, NetworkObject.transform.InverseTransformPoint(drumPosition.position), false);
             AddItemToDrumServerRpc(item.NetworkObject);
+        }
+
+        public void ResetWasher() // InteractTrigger
+        {
+            foreach (var item in itemsInDrum) // TODO: Test this
+            {
+                item.parentObject = null;
+                item.fallTime = 0f;
+                item.hasHitGround = false;
+            }
         }
 
         public void PlayDoorSFX() // Animation
