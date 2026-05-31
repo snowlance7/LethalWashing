@@ -1,0 +1,188 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 1963577118, guid: b9fa88e95e15d9348a8d0583367ab6d6, type: 3}
+  m_Name: WashingMachineDef
+  m_EditorClassIdentifier: 
+  _configEntries:
+  - settingName: Blacklist
+    DynamicConfigType: 0
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: Which items should be blacklisted from inserting into the washing
+      machine. This uses the `itemProperties.name` of items. You can get a list of
+      these names by using `/lw_items` and checking the logs.
+  - settingName: Prevent Despawn On Team Wipe
+    DynamicConfigType: 3
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 1
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: If true, any items with 0 value will not be despawned on team wipe
+  - settingName: Team Wipe Blacklist
+    DynamicConfigType: 0
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: Which items should be blacklisted from not despawning on team wipe.
+      This uses the `itemProperties.name` of items. You can get a list of these names
+      by using `/lw_items` and checking the logs.
+  - settingName: Wash Time
+    DynamicConfigType: 2
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 10
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: The amount of time it takes for the washing machine to finish its
+      wash cycle
+  - settingName: Usable Only On Company Day
+    DynamicConfigType: 3
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: If true, the washing machine will only be usable on company day/end
+      of quota
+  - settingName: Combine Coin Values
+    DynamicConfigType: 3
+    defaultString: 
+    defaultInt: 0
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: If true, will add up the total value of all scrap in the washer
+      and divide them into x amount of coins, with x being `Coins To Spawn`.
+  - settingName: Coins To Spawn
+    DynamicConfigType: 1
+    defaultString: 
+    defaultInt: 5
+    defaultFloat: 0
+    defaultBool: 0
+    defaultBoundedRange:
+      <Min>k__BackingField: 0
+      <Max>k__BackingField: 0
+    defaultAnimationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    defaultVector3: {x: 0, y: 0, z: 0}
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    Description: The amount of coins to spawn when using the `Combine Coin Values`
+      config
+  _tags: []
+  <Key>k__BackingField:
+    _namespace: lethalwashing
+    _key: washing_machine
+  <UnlockableItem>k__BackingField:
+    unlockableName: Washing Machine
+    prefabObject: {fileID: 7935419982241718248, guid: 4ed61f765d4e4424883890896d7eeb7a,
+      type: 3}
+    unlockableType: 0
+    shopSelectionNode: {fileID: 11400000, guid: 8d4d544ec7c47064cbe3276df328e581,
+      type: 2}
+    alwaysInStock: 1
+    IsPlaceable: 1
+    hasBeenMoved: 0
+    placedPosition: {x: 0, y: 0, z: 0}
+    placedRotation: {x: 0, y: 0, z: 0}
+    luckValue: 0
+    inStorage: 0
+    canBeStored: 1
+    maxNumber: 1
+    hasBeenUnlockedByPlayer: 0
+    suitMaterial: {fileID: 0}
+    headCostumeObject: {fileID: 0}
+    lowerTorsoCostumeObject: {fileID: 0}
+    alreadyUnlocked: 0
+    unlockedInChallengeFile: 0
+    spawnPrefab: 1
+    jumpAudio: {fileID: 0}
+  <InfoNodeText>k__BackingField: Allows you to wash your scrap, converting its value
+    into coins and preventing it from despawning on team wipe!
+  <TerminalPredicate>k__BackingField: {fileID: 0}
+  <PricingStrategy>k__BackingField: {fileID: 0}
+  <Cost>k__BackingField: 50
+  <IsShipUpgrade>k__BackingField: 0
+  <IsDecor>k__BackingField: 1
+  <GenerateCostConfig>k__BackingField: 1
+  <GenerateUnlockableTypeConfig>k__BackingField: 0
+  <GenerateDisablePricingStrategyConfig>k__BackingField: 1
+  <GenerateDisableUnlockRequirementConfig>k__BackingField: 1

@@ -3,6 +3,7 @@ using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
+using SnowyLib;
 
 /* bodyparts
  * 0 head
@@ -25,27 +26,43 @@ namespace LethalWashing
         [HarmonyPostfix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.PingScan_performed))]
         public static void PingScan_performedPostFix()
         {
-            if (!Utils.testing || !Utils.isBeta) { return; }
-            //WashingMachine.Instance?.SpawnCoin(10);
+            try
+            {
+                if (!Utils.testing) { return; }
+            }
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
+                return;
+            }
         }
 
         [HarmonyPrefix, HarmonyPatch(typeof(HUDManager), nameof(HUDManager.SubmitChat_performed))]
         public static void SubmitChat_performedPrefix(HUDManager __instance)
         {
-            string msg = __instance.chatTextField.text;
-            string[] args = msg.Split(" ");
-
-            switch (args[0])
+            try
             {
-                case "/lw_items":
-                    foreach (var item in LethalContent.Items.Values)
-                    {
-                        logger.LogInfo(item.Item.name);
-                    }
-                    break;
-                default:
-                    Utils.ChatCommand(args);
-                    break;
+                string msg = __instance.chatTextField.text;
+                string[] args = msg.Split(" ");
+
+                switch (args[0])
+                {
+                    case "/lw_items":
+                        foreach (var item in LethalContent.Items.Values)
+                        {
+                            logger.LogInfo(item.Item.name);
+                        }
+                        break;
+                    default:
+                        if (!Utils.testing || !IsServerOrHost) { return; }
+                        Utils.ChatCommand(args);
+                        break;
+                }
+            }
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
+                return;
             }
         }
     }

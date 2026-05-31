@@ -5,13 +5,11 @@ namespace LethalWashing
     public class LethalWashingContentHandler : ContentHandler<LethalWashingContentHandler>
     {
         public class WashingMachineAssets(DuskMod mod, string filePath) : AssetBundleLoader<WashingMachineAssets>(mod, filePath) { }
-
-
         public WashingMachineAssets? WashingMachine;
 
         public LethalWashingContentHandler(DuskMod mod) : base(mod)
         {
-            RegisterContent("washingmachine", out WashingMachine, true);
+            RegisterContent("washing_machine", out WashingMachine, true);
         }
     }
 }

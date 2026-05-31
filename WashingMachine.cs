@@ -7,6 +7,7 @@ using Unity.Netcode;
 using UnityEngine;
 using static LethalWashing.Plugin;
 using static LethalWashing.Configs;
+using SnowyLib;
 
 // TODO: Add button on side of washing machine to destroy it and all items inside it (put in storage)
 // TODO: If you put a maneater inside the washing machine, it grows up inside it and turns into a washing machine maneater enemy!
@@ -35,8 +36,11 @@ namespace LethalWashing
         public Collider drumCollider;
         public Collider doorCollider;
 
-        public PlaceableObjectsSurface placeableSurface;
+        //public PlaceableObjectsSurface placeableSurface;
         public PlaceableShipObject placeableShipObject;
+
+        public InteractTrigger resetTrigger;
+        public InteractTrigger hardResetTrigger;
 #pragma warning restore CS8618
 
         bool localPlayerHoldingScrap { get { return localPlayer.isHoldingObject && localPlayer.currentlyHeldObjectServer != null && localPlayer.currentlyHeldObjectServer.itemProperties.isScrap; } }
@@ -58,6 +62,7 @@ namespace LethalWashing
             blacklist = Blacklist.Replace(" ", "").Split(",");
             logger.LogDebug("Washing Machine spawned at " + transform.position);
         }
+
         public override void OnDestroy()
         {
             Instance = null;
@@ -65,6 +70,9 @@ namespace LethalWashing
 
         public void Update()
         {
+            resetTrigger.interactable = localPlayer.isHostPlayerObject ? true : false;
+            hardResetTrigger.interactable = localPlayer.isHostPlayerObject ? true : false;
+
             if (washTimer > 0)
             {
                 washTimer -= Time.deltaTime;
@@ -211,7 +219,8 @@ namespace LethalWashing
         public void SpawnCoin(int value)
         {
             if (!IsServer) { return; }
-            CoinBehavior coin = Utils.SpawnItem(LethalWashingKeys.Coin, coinSpawn.transform.position, coinSpawn.transform.rotation)!.GetComponentInChildren<CoinBehavior>();
+            CoinBehavior? coin = (CoinBehavior)Utils.SpawnItem(LethalWashingKeys.Coin, coinSpawn.transform.position, coinSpawn.transform.rotation)!;
+            if (coin == null) { return; }
             coin.SetScrapValueClientRpc(value);
         }
 
@@ -226,6 +235,7 @@ namespace LethalWashing
             if (!localPlayerHoldingScrap || localPlayer.isGrabbingObjectAnimation) { return; }
             //localPlayer.DiscardHeldObject(true, null, drumPosition.position);
             localPlayer.DiscardHeldObject(true, NetworkObject, NetworkObject.transform.InverseTransformPoint(drumPosition.position), false);
+            if (item == null || !item.NetworkObject.IsSpawned) { return; }
             AddItemToDrumServerRpc(item.NetworkObject);
         }
 
@@ -236,6 +246,25 @@ namespace LethalWashing
                 item.parentObject = null;
                 item.fallTime = 0f;
                 item.hasHitGround = false;
+                item.FallToGround();
+            }
+            itemsInDrum.Clear();
+        }
+
+        public void HardResetWasher() // InteractTrigger
+        {
+            try
+            {
+                ResetWasher();
+            }
+            catch (System.Exception e)
+            {
+                logger.LogError(e);
+            }
+            finally
+            {
+                logger.LogDebug("Hard resetting");
+                ShipBuildModeManager.Instance.StoreObjectServerRpc(NetworkObject, (int)localPlayer.actualClientId);
             }
         }
 
