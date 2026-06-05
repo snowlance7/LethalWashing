@@ -1,3 +1,8 @@
+## 1.4.0
+- Updated for V80
+- Coin can no longer be thrown (keeps causing issues)
+- Added 2 buttons on the machine for resetting and hard resetting the washing machine
+
 ## 1.3.1
 - Made coin grab collider bigger
 - Bug fixes

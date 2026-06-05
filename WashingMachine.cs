@@ -218,10 +218,13 @@ namespace LethalWashing
 
         public void SpawnCoin(int value)
         {
+            // y = -1.613 z = 1
             if (!IsServer) { return; }
-            CoinBehavior? coin = (CoinBehavior)Utils.SpawnItem(LethalWashingKeys.Coin, coinSpawn.transform.position, coinSpawn.transform.rotation)!;
+            Vector3 pos =  coinSpawn.transform.position + coinSpawn.transform.forward;
+            pos = pos + Vector3.down * 1.613f;
+            CoinBehavior? coin = (CoinBehavior)Utils.SpawnItem(LethalWashingKeys.Coin, pos, coinSpawn.transform.rotation, coinSpawn)!;
             if (coin == null) { return; }
-            coin.SetScrapValueClientRpc(value);
+            coin.EjectFromWashingMachineClientRpc(value);
         }
 
         public void StartWash() // InteractTrigger
@@ -265,6 +268,7 @@ namespace LethalWashing
             {
                 logger.LogDebug("Hard resetting");
                 ShipBuildModeManager.Instance.StoreObjectServerRpc(NetworkObject, (int)localPlayer.actualClientId);
+                NetworkObject.Despawn(destroy: true);
             }
         }
 

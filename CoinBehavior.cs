@@ -1,5 +1,6 @@
 ﻿using Dawn.Utils;
 using Dusk;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -12,6 +13,13 @@ namespace LethalWashing
         public AudioSource audioSource = null!;
         public Animator animator = null!;
         public List<AudioClip> coinDropSFXs = [];
+
+        public void Awake()
+        {
+            itemProperties.positionOffset = new Vector3(0.1f, 0.1f, 0f);
+            itemProperties.rotationOffset = new Vector3(0, 0, 45);
+            itemProperties.floorYOffset = 90;
+        }
 
         public override void ItemActivate(bool used, bool buttonDown = true)
         {
@@ -41,10 +49,11 @@ namespace LethalWashing
         }
 
         [ClientRpc]
-        public void SetScrapValueClientRpc(int setValueTo)
+        public void EjectFromWashingMachineClientRpc(int setValueTo)
         {
-            logger.LogDebug("SetScrapValueClientRpc");
+            logger.LogDebug("EjectFromWashingMachineClientRpc");
             SetScrapValue(setValueTo);
+
         }
     }
 }

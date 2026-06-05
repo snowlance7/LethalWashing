@@ -29,6 +29,7 @@ namespace LethalWashing
             try
             {
                 if (!Utils.testing) { return; }
+                WashingMachine.Instance?.SpawnCoin(1);
             }
             catch (System.Exception e)
             {
