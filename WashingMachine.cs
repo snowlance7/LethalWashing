@@ -1,13 +1,14 @@
 ﻿using DigitalRuby.ThunderAndLightning;
 using Dusk;
+using SnowyLib;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
-using static LethalWashing.Plugin;
 using static LethalWashing.Configs;
-using SnowyLib;
+using static LethalWashing.Plugin;
+using static UnityEngine.Rendering.DebugUI;
 
 // TODO: Add button on side of washing machine to destroy it and all items inside it (put in storage)
 // TODO: If you put a maneater inside the washing machine, it grows up inside it and turns into a washing machine maneater enemy!
@@ -15,12 +16,13 @@ using SnowyLib;
 
 namespace LethalWashing
 {
-    public class WashingMachine : NetworkBehaviour
+    internal class WashingMachine : NetworkBehaviour
     {
         public static WashingMachine? Instance { get; private set; }
 
 #pragma warning disable CS8618
         public Animator animator;
+        public Animator coinSpawnAnimator;
 
         public Transform coinSpawn;
         public Transform drumPosition;
@@ -54,6 +56,9 @@ namespace LethalWashing
 
         bool closedUntilCompanyDay = true;
 
+        bool spawningCoins;
+        List<int> coinsToSpawn = [];
+
         string[] blacklist = [];
 
         public void Start()
@@ -72,6 +77,12 @@ namespace LethalWashing
         {
             resetTrigger.interactable = localPlayer.isHostPlayerObject ? true : false;
             hardResetTrigger.interactable = localPlayer.isHostPlayerObject ? true : false;
+
+            if (coinsToSpawn.Count > 0 && !spawningCoins)
+            {
+                spawningCoins = true;
+                coinSpawnAnimator.SetTrigger("spawn");
+            }
 
             if (washTimer > 0)
             {
@@ -121,7 +132,7 @@ namespace LethalWashing
                     {
                         if (blacklist.Contains(localPlayer.currentlyHeldObjectServer.itemProperties.name))
                         {
-                            drumTrigger.disabledHoverTip = "Blacklisted";
+                            drumTrigger.disabledHoverTip = "Blacklisted! Item not allowed!";
                         }
                         else
                         {
@@ -197,34 +208,23 @@ namespace LethalWashing
                 }
             }
 
-            logger.LogDebug($"Spawning {values.Count} coins");
-            StartCoroutine(SpawnCoinsCoroutine(values));
-        }
-
-        IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
-        {
-            animator.SetBool("hatchOpen", true);
-            yield return new WaitForSeconds(1.5f);
-
-            foreach (var coinValue in coinValues)
+            IEnumerator SpawnCoinsCoroutine(List<int> coinValues)
             {
-                if (coinValue <= 0) { continue; }
-                SpawnCoin(coinValue);
-                yield return new WaitForSeconds(0.1f);
+                animator.SetBool("hatchOpen", true);
+                yield return new WaitForSeconds(1.5f);
+
+                foreach (var coinValue in coinValues)
+                {
+                    if (coinValue <= 0) { continue; }
+                    SpawnCoin(coinValue);
+                    yield return new WaitForSeconds(0.1f);
+                }
+
+                animator.SetBool("hatchOpen", false);
             }
 
-            animator.SetBool("hatchOpen", false);
-        }
-
-        public void SpawnCoin(int value)
-        {
-            // y = -1.613 z = 1
-            if (!IsServer) { return; }
-            Vector3 pos =  coinSpawn.transform.position + coinSpawn.transform.forward;
-            pos = pos + Vector3.down * 1.613f;
-            CoinBehavior? coin = (CoinBehavior)Utils.SpawnItem(LethalWashingKeys.Coin, pos, coinSpawn.transform.rotation, coinSpawn)!;
-            if (coin == null) { return; }
-            coin.EjectFromWashingMachineClientRpc(value);
+            logger.LogDebug($"Spawning {values.Count} coins");
+            StartCoroutine(SpawnCoinsCoroutine(values));
         }
 
         public void StartWash() // InteractTrigger
@@ -289,7 +289,32 @@ namespace LethalWashing
             }
         }
 
+        public void CoinFinishEjecting() // Animation
+        {
+            if (!IsServer) { return; }
+            int coinToSpawnValue = coinsToSpawn.First();
+            coinsToSpawn.RemoveAt(0);
+
+            Vector3 pos = coinSpawn.position + (coinSpawn.forward * 0.764f) + (coinSpawn.up * 0.645f);
+            CoinBehavior? coin = (CoinBehavior)Utils.SpawnItem(LethalWashingKeys.Coin, pos, coinSpawn.transform.rotation/*, RoundManager.Instance.mapPropsContainer.transform*/)!;
+            if (coin != null) coin.SetScrapValueClientRpc(coinToSpawnValue);
+
+            if (coinsToSpawn.Count <= 0)
+            {
+                spawningCoins = false;
+                return;
+            }
+
+            coinSpawnAnimator.SetTrigger("spawn");
+        }
+
         // RPCs
+
+        [ClientRpc]
+        public void SpawnCoinsClientRpc(List<int> values)
+        {
+            coinsToSpawn.AddRange(values);
+        }
 
         [ServerRpc(RequireOwnership = false)]
         public void AddItemToDrumServerRpc(NetworkObjectReference netRef)
@@ -322,6 +347,16 @@ namespace LethalWashing
             }
             OpenDoor(false);
             washTimer = WashTime;
+        }
+    }
+
+    internal class WashingMachineCoinSpawn : MonoBehaviour
+    {
+        [SerializeField] WashingMachine mainScript = null!;
+
+        public void CoinFinishEjectingAnimation()
+        {
+            mainScript.CoinFinishEjecting();
         }
     }
 }

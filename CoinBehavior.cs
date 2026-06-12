@@ -49,7 +49,7 @@ namespace LethalWashing
         }
 
         [ClientRpc]
-        public void EjectFromWashingMachineClientRpc(int setValueTo)
+        public void SetScrapValueClientRpc(int setValueTo)
         {
             logger.LogDebug("EjectFromWashingMachineClientRpc");
             SetScrapValue(setValueTo);
